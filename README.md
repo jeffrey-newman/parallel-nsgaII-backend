@@ -1,4 +1,4 @@
-# parallel nsgaII backend
+# parallel NSGA-II backend
 The backend engine of a parallelised NSGAII making use of MPI (written in C++)
 Work supported with funding from the Bushfire and Natural Hazard Cooperative Research Centre
 
