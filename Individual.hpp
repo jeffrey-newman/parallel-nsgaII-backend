@@ -10,58 +10,137 @@
 #define Individual_h
 
 #include <vector>
+#include "ProblemDefinitions.hpp"
 
 
-class RealOrIntType {
-    double real_val;
-    int int_val;
-    bool is_real;
-    
-public:
-    RealOrIntType(double val):
-    real_val(val), is_real(true)
-    {
-    }
-    
-    RealOrIntType(int val):
-    int_val(val), is_real(false)
-    {
-    }
-    
-    RealOrIntType(RealOrIntType & copy):
-    real_val(copy.real_val), int_val(copy.int_val), is_real(copy.is_real)
-    {
-    }
-    
-    RealOrIntType & operator=(double val)
-    {
-        real_val = val;
-        is_real = true;
-        return (*this);
-    }
-    
-    RealOrIntType & operator=(int val)
-    {
-        int_val = val;
-        is_real = false;
-        return (*this);
-    }
-};
-
-template <typename DecisionVariableType>
 class Individual
 {
 private:
-    std::vector<DecisionVariableType> decision_variables;
+    
+    ProblemDefinitions & definitions;
+    std::vector<double> real_decision_variables;
+    std::vector<int> int_decision_variables;
     std::vector<double> objectives;
     std::vector<double> constraints;
-    int nondomination_rank;
-    int crowding_score;
+    int rank;
+    double crowding_score;
     
 public:
-    DecisionVariableType & operator[](const int index)
+    
+//    Individual(DecisionVariableType dv_type, int number_of_decision_variables)
+    
+//    Individual(int number_of_real_decision_variables, int number_of_int_decision_variables = 0)
+//    : definitions(number_of_real_decision_variables, number_of_int_decision_variables)
+//    {
+//        
+//    }
+//    
+//    Individual(std::vector<double> & _real_lowerbounds,  std::vector<double> & _real_upperbounds,
+//               std::vector<int> & _int_lowerbounds, std::vector<int> & _int_upperbounds, std::vector<MinOrMaxType> _min_or_max_vec)
+//    : definitions(_real_lowerbounds, _real_upperbounds, _int_lowerbounds, _int_upperbounds, _min_or_max_vec)
+//    {
+//        
+//    }
+//    
+//    Individual(std::vector<double> & _real_lowerbounds,  std::vector<double> & _real_upperbounds,
+//               std::vector<int> & _int_lowerbounds, std::vector<int> & _int_upperbounds, std::vector<MinOrMaxType> _min_or_max_vec,
+//               std::initializer_list<double> _init_real_dv_list, std::initializer_list<int> _init_int_dv_list)
+//    : definitions(_real_lowerbounds, _real_upperbounds, _int_lowerbounds, _int_upperbounds, _min_or_max_vec),
+//     real_decision_variables(_init_real_dv_list), int_decision_variables(_init_int_dv_list)
+//    {
+//        
+//    }
+    
+    Individual(const Individual & cpy)
+    : definitions(cpy.definitions), real_decision_variables(cpy.real_decision_variables), int_decision_variables(cpy.int_decision_variables), objectives(cpy.objectives), constraints(cpy.constraints), rank(cpy.rank), crowding_score(cpy.crowding_score)
     {
-        return (decision_variables[index]);
+        
+    }
+    
+    Individual(ProblemDefinitions & defs)
+    : definitions(defs), real_decision_variables(defs.real_lowerbounds.size()), int_decision_variables(defs.int_lowerbounds.size()), objectives(defs.minimise_or_maximise.size()), constraints(defs.number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())
+    {
+        
+    }
+    
+    Individual &
+    operator= ( const Individual & orig)
+    {
+        this->definitions = orig.definitions;
+        this->real_decision_variables = orig.real_decision_variables;
+        this->int_decision_variables = orig.int_decision_variables;
+        this->objectives = orig.objectives;
+        this->constraints = orig.constraints;
+        this->rank = orig.rank;
+        this->crowding_score = orig.crowding_score;
+        return (*this);
+    }
+    
+    const std::vector<double> &
+    getRealDVVector() const
+    {
+        return (real_decision_variables);
+    }
+    
+    const std::vector<int> &
+    getIntDVVector() const
+    {
+        return (int_decision_variables);
+    }
+    
+    void
+    setObjectives(std::vector<double> objs)
+    {
+        objectives = objs;
+    }
+    
+    void
+    setConstraints(std::vector<double> cons)
+    {
+        constraints = cons;
+    }
+    
+    const MinOrMaxType &
+    isMinimiseOrMaximise(const int index) const
+    {
+        return (definitions.minimise_or_maximise[index]);
+        
+    }
+    
+    const double &
+    getRealDV(const int index) const
+    {
+        return (real_decision_variables[index]);
+    }
+    
+    void
+    setRealDV(const int index, const double & val)
+    {
+        real_decision_variables[index] = val;
+    }
+    
+    void
+    setRealDVs(std::vector<double> real_dvs)
+    {
+        real_decision_variables = real_dvs;
+    }
+    
+    const int &
+    getIntDV(const int index) const
+    {
+        return (int_decision_variables[index]);
+    }
+    
+    void
+    setIntDV(const int index, const int & val)
+    {
+        int_decision_variables[index] = val;
+    }
+    
+    void
+    setIntDVs(std::vector<int> int_dvs)
+    {
+        int_decision_variables = int_dvs;
     }
     
     const double & getObjective(const int index) const
@@ -69,7 +148,7 @@ public:
         return (objectives[index]);
     }
     
-    void setObjectives(const int index, const double & value)
+    void setObjective(const int index, const double & value)
     {
         objectives[index] = value;
     }
@@ -84,26 +163,68 @@ public:
         constraints[index] = value;
     }
     
-    int getNondominatedRank(void) const
+    const int getRank(void) const
     {
-        return (nondomination_rank);
+        return (rank);
     }
     
-    void setNondominatedRank(int rank)
+    void setRank(const int _rank)
     {
-        nondomination_rank = rank;
+        rank = _rank;
     }
     
-    int getCrowdingScore(void) const
+    const double getCrowdingScore(void) const
     {
         return (crowding_score);
     }
     
-    void setCrowdingScore(int score)
+    void setCrowdingScore(double score)
     {
         crowding_score = score;
     }
+    
+    const double & getRealUpperBound(const int index)
+    {
+        return (definitions.real_upperbounds[index]);
+    }
+    
+    const double & getRealLowerBound(const int index)
+    {
+        return (definitions.real_lowerbounds[index]);
+    }
+    
+    const int getIntUpperBound(const int index)
+    {
+        return (definitions.int_upperbounds[index]);
+    }
+    
+    const int getIntLowerBound(const int index)
+    {
+        return (definitions.int_lowerbounds[index]);
+    }
+    
+    const unsigned long numberOfRealDecisionVariables() const
+    {
+        return (real_decision_variables.size());
+    }
+    
+    const unsigned long numberOfIntDecisionVariables() const
+    {
+        return (int_decision_variables.size());
+    }
+    
+    const unsigned long numberOfObjectives()
+    {
+        return (objectives.size());
+    }
+    
+    const unsigned long numberOfConstraints()
+    {
+        return (constraints.size());
+    }
 };
 
+
+typedef Individual * IndividualPtr;
 
 #endif /* Individual_h */
