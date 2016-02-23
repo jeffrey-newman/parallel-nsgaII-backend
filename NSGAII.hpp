@@ -19,7 +19,10 @@
 #include "Checkpoint.hpp"
 #include "Evaluation.hpp"
 #include "Merge.hpp"
+
+#ifdef WITH_VTK
 #include "PlotFronts.hpp"
+#endif
 
 
 enum Visualise{ON, OFF};
@@ -81,16 +84,22 @@ public:
         mutation(children);
         pop_eval(children);
         PopulationSPtr previous_gen( (Population *) NULL);
-        
+
+#ifdef WITH_VTK
         boost::scoped_ptr<PlotFrontVTK> plot((PlotFrontVTK *) NULL);
         if (do_visualise == ON) plot.reset(new PlotFrontVTK);
+#endif
         
         
         do {
             previous_gen = parents;
             parents = children;
             children = selection(merge_calc_front_and_dist(previous_gen, parents));
+
+#ifdef WITH_VTK
             if (do_visualise == ON) (*plot)(merge_calc_front_and_dist.getFronts());
+#endif
+            
             crossover(children);
             mutation(children);
             pop_eval(children);
@@ -112,8 +121,10 @@ public:
             DebsCrowdingDistance::calculate(front);
         }
         
+#ifdef WITH_VTK
         if (do_visualise == ON) (*plot)(fronts);
-
+#endif
+        
         return (children);
         
     }

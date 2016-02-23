@@ -10,12 +10,16 @@
 
 // Test to get replication of figure in Deb's article "Self-Adaptation in Real-Parameter Genetic Algorithms with Simulated Binary Crossover" through montecarlo sampling
 
+#ifdef WITH_VTK
 #include <vtkAutoInit.h>
 VTK_MODULE_INIT(vtkRenderingOpenGL);
+#endif
 
 #include <stdio.h>
 #include <random>
 #include <string>
+
+#ifdef WITH_VTK
 #include <vtkVersion.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
@@ -31,6 +35,7 @@ VTK_MODULE_INIT(vtkRenderingOpenGL);
 
 #define VTK_CREATE(type, name) \
 vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+#endif
 
 #include "../Crossover.hpp"
 
@@ -76,6 +81,7 @@ int main(int argc, char* argv[])
 //        std::cout << child2[0] << std::endl;
     }
     
+#ifdef WITH_VTK
     // plot results.
     // Set up a 2D scene, add an XY chart to it
     VTK_CREATE(vtkContextView, view);
@@ -134,5 +140,6 @@ int main(int argc, char* argv[])
     view->GetRenderWindow()->SetMultiSamples(0);
     view->GetInteractor()->Initialize();
     view->GetInteractor()->Start();
+#endif
     
 }

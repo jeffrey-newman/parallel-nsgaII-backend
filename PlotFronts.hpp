@@ -9,6 +9,10 @@
 #ifndef PlotFronts_h
 #define PlotFronts_h
 
+
+
+
+#ifdef WITH_VTK
 #include <sstream>
 
 #include <vtkVersion.h>
@@ -25,7 +29,9 @@
 #include <vtkRenderer.h>
 #include <vtkTable.h>
 
+
 #include "colours.hpp"
+
 
 
 class PlotFrontVTK
@@ -166,5 +172,35 @@ public:
     
 
 };
+
+#else
+class PlotFrontVTK
+{
+    
+public:
+    
+    PlotFrontVTK() :
+ 
+    {
+        
+
+        
+    }
+    
+    ~PlotFrontVTK()
+    {
+
+    }
+    
+    void
+    operator()(std::vector<std::vector<IndividualPtr> > fronts)
+    {
+        
+        
+    }
+    
+    
+};
+#endif
 
 #endif /* PlotFronts_h */

@@ -64,7 +64,9 @@ int main(int argc, char * argv[])
         }
     }
     
+#ifdef WITH_VTK
     PlotFrontVTK plot;
     plot(values2);
+#endif
 
 }
