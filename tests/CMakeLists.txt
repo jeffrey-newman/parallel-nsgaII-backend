@@ -50,7 +50,10 @@ SET (DebsPolynomialMutationTesterSources
     DebsPolynomialMutationTester.cpp
 )
 
-ADD_EXECUTABLE(DevsPolynomialMutationTester ${DebsPolynomialMutationTesterSources} ${BackendSources2})
+if(VTK_FOUND)
+	SET (DebsPolynomialMutationTesterSources
+		DebsPolynomialMutationTester.cpp
+		)
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
@@ -97,7 +100,7 @@ SET(DebsCrowdingCalcTestSources
     TestDebsCrowdingDistance.cpp
 )
 
-ADD_EXECUTABLE(TestDebsCrowding ${DebsCrowdingCalcTestSources} ${BackendSources2})
+	ADD_EXECUTABLE(TestDebsCrowding ${DebsCrowdingCalcTestSources} ${BackendSources2})
 
 IF(USE_VTK)
 	if(VTK_LIBRARIES)
