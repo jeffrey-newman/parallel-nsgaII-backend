@@ -15,7 +15,9 @@
 #define Crossover_h
 
 #include <cmath>
+#include <chrono>
 #include "Types.hpp"
+
 
 double default_eps = 0.00001;
 double default_crossoverp = 0.7;

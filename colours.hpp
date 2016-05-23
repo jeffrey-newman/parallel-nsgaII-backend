@@ -9,6 +9,8 @@
 #ifndef colours_h
 #define colours_h
 
+#include <chrono>
+
 std::uniform_real_distribution<double> colour_uniform(0.0,1.0);
 unsigned seed_colour = std::chrono::system_clock::now().time_since_epoch().count();
 std::mt19937 default_rng_coulour(seed_colour);

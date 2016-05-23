@@ -50,10 +50,7 @@ SET (DebsPolynomialMutationTesterSources
     DebsPolynomialMutationTester.cpp
 )
 
-if(VTK_FOUND)
-	SET (DebsPolynomialMutationTesterSources
-		DebsPolynomialMutationTester.cpp
-		)
+ADD_EXECUTABLE(DevsPolynomialMutationTester ${DebsPolynomialMutationTesterSources} ${BackendSources2})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
