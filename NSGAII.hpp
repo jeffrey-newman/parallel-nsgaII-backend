@@ -19,6 +19,7 @@
 #include "Checkpoint.hpp"
 #include "Evaluation.hpp"
 #include "Merge.hpp"
+#include "Population.hpp"
 
 #ifdef WITH_VTK
 #include "PlotFronts.hpp"

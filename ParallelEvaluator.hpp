@@ -11,6 +11,9 @@
 
 #include <boost/mpi.hpp>
 #include "Evaluation.hpp"
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/utility.hpp>
+
 
 class ParallelEvaluatorBase
 {
