@@ -17,7 +17,7 @@ class DistanceComparator
             
 public:
             
-     inline bool operator()(std::pair<Individual *, double> & first, std::pair<Individual *, double> & second)
+     inline bool operator()(const std::pair<Individual *, double> & first, const std::pair<Individual *, double> & second)
      {
          return (first.second > second.second);
      }

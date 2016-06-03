@@ -26,7 +26,7 @@ public:
         
     }
     
-    inline bool operator()(std::pair<IndividualPtr, double> & first, std::pair<IndividualPtr, double> & second)
+    inline bool operator()(const std::pair<IndividualPtr, double> & first, const std::pair<IndividualPtr, double> & second)
     {
         return (Comparator::compareObjective(*(first.first), *(second.first), objective_index));
     }

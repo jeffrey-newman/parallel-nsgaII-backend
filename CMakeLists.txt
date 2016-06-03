@@ -14,8 +14,13 @@ ENDIF()
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
-SET(Boost_USE_STATIC_LIBS ON)
-SET(Boost_USE_STATIC_RUNTIME ON)
+
+SET(USE_STATIC_BOOST CACHE BOOL "Set to on to use static boost libraries")
+IF (USE_STATIC_BOOST)
+    SET(Boost_USE_STATIC_LIBS ON)
+    SET(Boost_USE_STATIC_RUNTIME ON)
+ENDIF()
+
 FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
