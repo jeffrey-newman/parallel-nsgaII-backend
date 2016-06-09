@@ -17,7 +17,7 @@
 
 int main(int argc, char* argv[])
 {
-    boost::mpi::environment env;
+    boost::mpi::environment env(argc, argv);
     boost::mpi::communicator world;
     SUM eval;
     

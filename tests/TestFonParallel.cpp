@@ -7,9 +7,12 @@
 //
 
 #include <stdio.h>
-#include <boost/mpi.hpp>
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
+#include <chrono>
+#include <random>
 #include "../ParallelEvaluator.hpp"
 #include "../TestFunctions.hpp"
 #include "../NSGAII.hpp"
@@ -18,7 +21,7 @@
 
 int main(int argc, char* argv[])
 {
-    boost::mpi::environment env;
+    boost::mpi::environment env(argc, argv);
     boost::mpi::communicator world;
     SUM eval;
     
