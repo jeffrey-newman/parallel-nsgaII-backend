@@ -12,6 +12,8 @@
 #include <random>
 #include <chrono>
 #include "Types.hpp"
+#include <boost/serialization/nvp.hpp>
+
 
 
 std::uniform_real_distribution<double> mut_uniform(0.0,1.0);
@@ -87,6 +89,14 @@ public:
         }
         
         
+    }
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+            ar & BOOST_SERIALIZATION_NVP(eta_m);
+            ar & BOOST_SERIALIZATION_NVP(probability_mutation);
     }
 };
 

@@ -18,6 +18,8 @@
 #include <chrono>
 #include "Types.hpp"
 
+#include <boost/serialization/nvp.hpp>
+
 
 double default_eps = 0.00001;
 double default_crossoverp = 0.7;
@@ -134,6 +136,16 @@ public:
         }
         
         
+    }
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+            ar & BOOST_SERIALIZATION_NVP(probability_crossover);
+            ar & BOOST_SERIALIZATION_NVP(eps);
+            ar & BOOST_SERIALIZATION_NVP(eta_c);
+            ar & BOOST_SERIALIZATION_NVP(proportion_crossed);
     }
 };
 

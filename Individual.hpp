@@ -11,7 +11,9 @@
 
 #include <vector>
 #include "ProblemDefinitions.hpp"
-
+#include <boost/archive/tmpdir.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/vector.hpp>
 
 class Individual
 {
@@ -222,6 +224,19 @@ public:
     {
         return (constraints.size());
     }
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+            ar & BOOST_SERIALIZATION_NVP(real_decision_variables);
+            ar & BOOST_SERIALIZATION_NVP(int_decision_variables);
+            ar & BOOST_SERIALIZATION_NVP(objectives);
+            ar & BOOST_SERIALIZATION_NVP(constraints);
+            ar & BOOST_SERIALIZATION_NVP(rank);
+            ar & BOOST_SERIALIZATION_NVP(crowding_score);
+    }
+
 };
 
 

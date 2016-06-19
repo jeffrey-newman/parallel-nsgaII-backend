@@ -188,4 +188,10 @@ endif()
 
 set_property(TARGET TestParallelSpeedup PROPERTY CXX_STANDARD 11)
 
-    
+
+SET(TestIndiSerialisatn
+        testserialisation.cpp
+   )
+ADD_EXECUTABLE(TestIndSerltn ${TestIndiSerialisatn})
+target_link_libraries(TestIndSerltn ${Boost_LIBRARIES})
+set_property(TARGET TestIndSerltn PROPERTY CXX_STANDARD 11)

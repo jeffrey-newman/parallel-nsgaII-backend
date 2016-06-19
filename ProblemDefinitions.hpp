@@ -9,6 +9,8 @@
 #ifndef ProblemDefinitions_h
 #define ProblemDefinitions_h
 
+#include <limits>
+
 
 enum MinOrMaxType {
     MINIMISATION,

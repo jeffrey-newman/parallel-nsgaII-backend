@@ -34,7 +34,7 @@ template <typename RNG>
 class NSGAII {
 private:
     RNG & random_number_generator;
-    DummyEvaluator dummy_eval;
+    DummyObjectivesAndConstraints dummy_eval;
     EvaluatePopulation default_evaluator;
     EvaluatePopulationBase & pop_eval;
     TournamentSelection<RNG> selection;
@@ -48,7 +48,7 @@ private:
     Visualise do_visualise;
     
 public:
-    NSGAII(RNG & _random_number_generator, EvaluatorBase & eval, int max_gen)
+    NSGAII(RNG & _random_number_generator, ObjectivesAndConstraintsBase & eval, int max_gen)
     : random_number_generator(_random_number_generator), default_evaluator(eval), pop_eval(default_evaluator), selection(_random_number_generator), checkpoint(max_gen), do_visualise(OFF)
     {
         
@@ -87,6 +87,10 @@ public:
         mutation(children);
         pop_eval(children);
         PopulationSPtr previous_gen( (Population *) NULL);
+        previous_gen = parents;
+        parents = children;
+        children = selection(merge_calc_front_and_dist(previous_gen, parents));
+        
 
 #ifdef WITH_VTK
         boost::scoped_ptr<PlotFrontVTK> plot((PlotFrontVTK *) NULL);
@@ -95,10 +99,7 @@ public:
         
         
         do {
-            previous_gen = parents;
-            parents = children;
-            children = selection(merge_calc_front_and_dist(previous_gen, parents));
-
+            
 #ifdef WITH_VTK
             if (do_visualise == ON) (*plot)(merge_calc_front_and_dist.getFronts());
 #endif
@@ -106,16 +107,15 @@ public:
             crossover(children);
             mutation(children);
             pop_eval(children);
+            previous_gen = parents;
+            parents = children;
+            children = merge_calc_front_and_dist(previous_gen, parents);
 //            fronts = DebsNonDominatesSorting::sort(children);
 //            PlotFrontVTK plot2;
 //            plot2(fronts);
 //            std::cout << "Population size: " << children->populationSize() << std::endl;
         } while (checkpoint(children));
-       
         
-        previous_gen = parents;
-        parents = children;
-        children = merge_calc_front_and_dist(previous_gen, parents);
         pop_eval(children);
         fronts = DebsNonDominatesSorting::sort(children);
         

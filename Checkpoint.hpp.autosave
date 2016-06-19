@@ -10,6 +10,7 @@
 #define Checkpoint_h
 
 #include <boost/serialization/nvp.hpp>
+#include <boost/foreach.hpp>
 
 
 class CheckpointBase
@@ -24,6 +25,33 @@ public:
     operator()(PopulationSPtr population)
     {
         return true;
+    }
+};
+
+class Checkpoints
+{
+private:
+    std::vector<CheckpointBase &> my_checkpoints;
+    
+public:
+    Checkpoints()
+    {
+        
+    }
+    
+    addCheckpoint(CheckpointBase & checkpoint_2_add)
+    {
+        my_checkpoints.push_back(checkpoint_2_add);
+    }
+    
+    bool
+    operator()(PopulationSPtr population)
+    {
+        bool do_continue = true;
+        BOOST_FOREACH(CheckpointBase & base, my_checkpoints)
+        {
+            do_continue = (do_continue && base.operator ()(population));
+        }
     }
 };
 
@@ -59,37 +87,6 @@ public:
     }
 };
 
-class SerialiseCheckpoint : public CheckpointBase
-{
-    int gen_frequency;
-    int gen_number;
-    NSGAII
 
-public:
-    SerialiseCheckpoint(int _max_gen)
-    : max_gen(_max_gen), gen_number(0)
-    {
-
-    }
-
-    bool
-    operator()(PopulationSPtr population)
-    {
-        ++gen_number;
-        if (gen_number % gen_frequency == 0)
-        {
-
-        }
-        return true;
-    }
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
-            ar & BOOST_SERIALIZATION_NVP(gen_frequency);
-            ar & BOOST_SERIALIZATION_NVP(gen_number);
-    }
-};
 
 #endif /* Checkpoint_h */
