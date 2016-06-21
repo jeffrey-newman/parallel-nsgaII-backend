@@ -15,7 +15,7 @@
 #include "Types.hpp"
 
 
-class EvaluatorBase
+class ObjectivesAndConstraintsBase
 {
 public:
     virtual
@@ -23,7 +23,7 @@ public:
     operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars) = 0;
 };
 
-class DummyEvaluator : public EvaluatorBase
+class DummyObjectivesAndConstraints : public ObjectivesAndConstraintsBase
 {
 private:
     std::pair<std::vector<double>, std::vector<double> > dummy_return;
@@ -45,10 +45,10 @@ public:
 
 class EvaluatePopulation : public EvaluatePopulationBase
 {
-    EvaluatorBase & eval;
+    ObjectivesAndConstraintsBase & eval;
     
 public:
-    EvaluatePopulation(EvaluatorBase & _eval)
+    EvaluatePopulation(ObjectivesAndConstraintsBase & _eval)
     : eval(_eval)
     {
         

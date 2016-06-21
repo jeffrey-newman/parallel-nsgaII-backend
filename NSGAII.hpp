@@ -26,6 +26,7 @@
 #endif
 
 #include <boost/serialization/nvp.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 
 enum Visualise{ON, OFF};
@@ -34,28 +35,29 @@ template <typename RNG>
 class NSGAII {
 private:
     RNG & random_number_generator;
-    DummyEvaluator dummy_eval;
+    DummyObjectivesAndConstraints dummy_eval;
     EvaluatePopulation default_evaluator;
     EvaluatePopulationBase & pop_eval;
     TournamentSelection<RNG> selection;
     DebsSBXCrossover<RNG> crossover;
     DebsPolynomialMutation<RNG> mutation;
-    Checkpoint checkpoint;
+    Checkpoints my_checkpoints;
     int max_gen;
 //    PlotFrontVTK plot_front1;
 //    PlotFrontVTK plot_front2;
     DebsRankingAndCrowdingSelector merge_calc_front_and_dist;
     Visualise do_visualise;
+    PopulationSPtr pop;
     
 public:
-    NSGAII(RNG & _random_number_generator, EvaluatorBase & eval, int max_gen)
-    : random_number_generator(_random_number_generator), default_evaluator(eval), pop_eval(default_evaluator), selection(_random_number_generator), checkpoint(max_gen), do_visualise(OFF)
+    NSGAII(RNG & _random_number_generator, ObjectivesAndConstraintsBase & eval)
+    : random_number_generator(_random_number_generator), default_evaluator(eval), pop_eval(default_evaluator), selection(_random_number_generator), do_visualise(OFF)
     {
         
     }
     
-    NSGAII(RNG & _random_number_generator, EvaluatePopulationBase & _pop_eval, int max_gen)
-    : random_number_generator(_random_number_generator), default_evaluator(dummy_eval), pop_eval(_pop_eval), selection(_random_number_generator), checkpoint(max_gen), do_visualise(OFF)
+    NSGAII(RNG & _random_number_generator, EvaluatePopulationBase & _pop_eval)
+    : random_number_generator(_random_number_generator), default_evaluator(dummy_eval), pop_eval(_pop_eval), selection(_random_number_generator), do_visualise(OFF)
     {
         
     }
@@ -66,6 +68,12 @@ public:
     visualise(Visualise _val = ON)
     {
         do_visualise = _val;
+    }
+
+    void
+    add_checkpoint(CheckpointBase & chkpnt_2_add)
+    {
+        my_checkpoints.addCheckpoint(&chkpnt_2_add);
     }
     
     PopulationSPtr
@@ -87,6 +95,10 @@ public:
         mutation(children);
         pop_eval(children);
         PopulationSPtr previous_gen( (Population *) NULL);
+        previous_gen = parents;
+        parents = children;
+        children = selection(merge_calc_front_and_dist(previous_gen, parents));
+        pop = children;
 
 #ifdef WITH_VTK
         boost::scoped_ptr<PlotFrontVTK> plot((PlotFrontVTK *) NULL);
@@ -95,9 +107,6 @@ public:
         
         
         do {
-            previous_gen = parents;
-            parents = children;
-            children = selection(merge_calc_front_and_dist(previous_gen, parents));
 
 #ifdef WITH_VTK
             if (do_visualise == ON) (*plot)(merge_calc_front_and_dist.getFronts());
@@ -106,18 +115,18 @@ public:
             crossover(children);
             mutation(children);
             pop_eval(children);
+            previous_gen = parents;
+            parents = children;
+            children = merge_calc_front_and_dist(previous_gen, parents);
+            pop = children;
 //            fronts = DebsNonDominatesSorting::sort(children);
 //            PlotFrontVTK plot2;
 //            plot2(fronts);
 //            std::cout << "Population size: " << children->populationSize() << std::endl;
-        } while (checkpoint(children));
-       
-        
-        previous_gen = parents;
-        parents = children;
-        children = merge_calc_front_and_dist(previous_gen, parents);
-        pop_eval(children);
-        fronts = DebsNonDominatesSorting::sort(children);
+        } while (my_checkpoints(children));
+
+//        pop_eval(pop);
+        fronts = DebsNonDominatesSorting::sort(pop);
         
         BOOST_FOREACH(std::vector<IndividualPtr> front, fronts)
         {
@@ -128,7 +137,7 @@ public:
         if (do_visualise == ON) (*plot)(fronts);
 #endif
         
-        return (children);
+        return (pop);
         
     }
 
@@ -138,9 +147,10 @@ public:
     {
             ar & BOOST_SERIALIZATION_NVP(crossover);
             ar & BOOST_SERIALIZATION_NVP(mutation);
-            ar & BOOST_SERIALIZATION_NVP(checkpoint);
+//            ar & BOOST_SERIALIZATION_NVP(my_checkpoints);
             ar & BOOST_SERIALIZATION_NVP(max_gen);
             ar & BOOST_SERIALIZATION_NVP(do_visualise);
+            ar & BOOST_SERIALIZATION_NVP(pop);
 
     }
 };

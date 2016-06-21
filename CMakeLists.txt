@@ -24,6 +24,13 @@ ENDIF()
 FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
+add_definitions(-DVARIANT=4)
+
+add_subdirectory(Checkpoints)
+include_directories(Checkpoints)
+add_subdirectory(Serialization)
+include_directories(Serialization)
+
 SET(BackendSources
 	Crossover.hpp
 	Individual.hpp
@@ -35,7 +42,14 @@ SET(BackendSources
 	Types.hpp
 	)
 
+SET(AllSources
+    ${CheckpointsSources}
+    ${SerializationSources}
+    ${BackendSources}
+    )
+
 add_subdirectory(tests)
+
 
 
 

@@ -16,7 +16,7 @@
 #include "Evaluation.hpp"
 #include "ProblemDefinitions.hpp"
 
-class FON : public EvaluatorBase
+class FON : public ObjectivesAndConstraintsBase
 {
 private:
     
@@ -98,7 +98,7 @@ public:
 };
 
 
-class SUM : public EvaluatorBase
+class SUM : public ObjectivesAndConstraintsBase
 {
 private:
     

@@ -66,7 +66,8 @@ public:
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-            ar & *this;
+            ar & boost::serialization::make_nvp("PopVec", boost::serialization::base_object<std::vector<Individual> >(*this) );
+//            ar &  BOOST_SERIALIZATION_BASE_OBJECT_NVP(std::vector<Individual>);
     }
 };
 

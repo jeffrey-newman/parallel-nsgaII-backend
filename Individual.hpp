@@ -90,6 +90,12 @@ public:
         return (int_decision_variables);
     }
     
+    const std::vector<double> &
+    getObjectives() const
+    {
+        return objectives;
+    }
+
     void
     setObjectives(std::vector<double> objs)
     {

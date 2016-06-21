@@ -7,15 +7,20 @@
 //
 
 #include <stdio.h>
+#include <iostream>
+#include <fstream>
+
 #include <boost/mpi.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
 
+
 #include "../ParallelEvaluator.hpp"
 #include "../TestFunctions.hpp"
 #include "../NSGAII.hpp"
+#include "../Checkpoints/MaxGenCheckpoint.hpp"
 
 
 
@@ -66,7 +71,10 @@ int main(int argc, char* argv[])
         
         // The optimiser
         int max_gen = 10;
-        NSGAII<RNG> optimiser(rng, eval_server, max_gen);
+        NSGAII<RNG> optimiser(rng, eval_server);
+        MaxGenCheckpoint max_gen_stop(max_gen);
+        optimiser.add_checkpoint(max_gen_stop);
+
 //        optimiser.visualise();
         
         // Initialise population

@@ -9,13 +9,18 @@
 #ifndef Checkpoint_h
 #define Checkpoint_h
 
-#include <boost/serialization/nvp.hpp>
+
+#include <boost/foreach.hpp>
+#include <boost/serialization/assume_abstract.hpp>
 
 
 class CheckpointBase
 {
+public:
     virtual bool operator() (PopulationSPtr population) = 0;
 };
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT( CheckpointBase );
 
 class DummyCheckpoint : public CheckpointBase
 {
@@ -27,69 +32,47 @@ public:
     }
 };
 
-class MaxGenCheckpoint : public CheckpointBase
+class Checkpoints
 {
-    int max_gen;
-    int gen_number;
-    
+private:
+    std::vector<CheckpointBase *> my_checkpoints;
+//    std::vector<CheckpointBase &> my_checkpoints;
+
 public:
-    Checkpoint(int _max_gen)
-    : max_gen(_max_gen), gen_number(0)
+    Checkpoints()
     {
-        
+
     }
-    
+
+    void
+    addCheckpoint(CheckpointBase * checkpoint_2_add)
+    {
+        my_checkpoints.push_back(checkpoint_2_add);
+    }
+
     bool
     operator()(PopulationSPtr population)
     {
-        ++gen_number;
-        if (gen_number > max_gen)
+        bool do_continue = true;
+        BOOST_FOREACH(CheckpointBase * chckpnt, my_checkpoints)
         {
-            return false;
+            do_continue = (do_continue && chckpnt->operator ()(population));
         }
-        return true;
+        return (do_continue);
     }
 
     friend class boost::serialization::access;
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-            ar & BOOST_SERIALIZATION_NVP(max_gen);
-            ar & BOOST_SERIALIZATION_NVP(gen_number);
+            ar & BOOST_SERIALIZATION_NVP(my_checkpoints);
     }
+
+
 };
 
-class SerialiseCheckpoint : public CheckpointBase
-{
-    int gen_frequency;
-    int gen_number;
-    NSGAII
 
-public:
-    SerialiseCheckpoint(int _max_gen)
-    : max_gen(_max_gen), gen_number(0)
-    {
 
-    }
 
-    bool
-    operator()(PopulationSPtr population)
-    {
-        ++gen_number;
-        if (gen_number % gen_frequency == 0)
-        {
-
-        }
-        return true;
-    }
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
-            ar & BOOST_SERIALIZATION_NVP(gen_frequency);
-            ar & BOOST_SERIALIZATION_NVP(gen_number);
-    }
-};
 
 #endif /* Checkpoint_h */

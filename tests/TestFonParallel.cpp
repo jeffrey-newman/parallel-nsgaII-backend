@@ -16,6 +16,7 @@
 #include "../ParallelEvaluator.hpp"
 #include "../TestFunctions.hpp"
 #include "../NSGAII.hpp"
+#include "../Checkpoints/MaxGenCheckpoint.hpp"
 
 
 
@@ -37,7 +38,9 @@ int main(int argc, char* argv[])
         
         // The optimiser
         int max_gen = 10000;
-        NSGAII<RNG> optimiser(rng, eval_server, max_gen);
+        NSGAII<RNG> optimiser(rng, eval_server);
+        MaxGenCheckpoint max_gen_stop(max_gen);
+        optimiser.add_checkpoint(max_gen_stop);
         optimiser.visualise();
         
         // Initialise population

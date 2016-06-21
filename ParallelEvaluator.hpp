@@ -126,10 +126,10 @@ public:
 
 class ParallelEvaluatePopClient : private ParallelEvaluatorBase
 {
-    EvaluatorBase & eval;
+    ObjectivesAndConstraintsBase & eval;
     
 public:
-    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs, EvaluatorBase & _eval)
+    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs, ObjectivesAndConstraintsBase & _eval)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs), eval(_eval)
     {
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient

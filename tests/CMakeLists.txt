@@ -1,35 +1,47 @@
-SET(BackendSources2
-	../Crossover.hpp
-	../Individual.hpp
-	../Mutation.hpp
-	../parallel_nsgaII_backend.cpp
-	../parallel_nsgaII_backend.hpp
-	../parallel_nsgaII_backendPriv.hpp
-	../Population.hpp
-	../Types.hpp
-	../Checkpoint.hpp
-	../Comparator.hpp
-	../DebsCrowdingDistance.hpp
-	../DebsNondominatedSorting.hpp
-	../Evaluation.hpp
-	../Merge.hpp
-	../NSGAII.hpp
-	../ProblemDefinitions.hpp
-	../Selection.hpp
-	../TestFunctions.hpp
-    ../PlotFronts.hpp
-    ../ParallelEvaluator.hpp
-#   ../ParallelEvaluatorServer.hpp
-#   ../ParallelEvaluatorClient.hpp
-    
-	)
-	
+SET(BackendSourcesT
+        ../Checkpoint.hpp
+        ../colours.hpp
+        ../Comparator.hpp
+        ../Crossover.hpp
+        ../Individual.hpp
+        ../Mutation.hpp
+        ../parallel_nsgaII_backend.cpp
+        ../parallel_nsgaII_backend.hpp
+        ../parallel_nsgaII_backendPriv.hpp
+        ../Population.hpp
+        ../Types.hpp
+        ../NSGAII.hpp
+        )
+
+SET(CheckpointsSourcesT
+        ../Checkpoints/MaxGenCheckpoint.hpp
+        ../Checkpoints/SavePopCheckpoint.hpp
+        ../Checkpoints/SerialiseCheckpoint.hpp
+        )
+
+SET(SerializationSourcesT
+        ../Serialization/SerializeBoostPath.hpp
+        ../Serialization/SerializeRng.hpp
+        )
+
+SET(MetricSourcesT
+        ../Metrics/hv.c
+        ../Metrics/hv.h
+        ../Metrics/Hypervolume.hpp
+        )
+
+SET(AllSourcesT
+        ${CheckpointsSourcesT}
+        ${SerializationSourcesT}
+        ${BackendSourcesT}
+        ${MetricSourcesT}
+        )
 
 SET( DebsSBXTesterSources
         DebsSBXCrossoverTester.cpp
     )
 	
-ADD_EXECUTABLE(DebsSBXTester ${DebsSBXTesterSources} ${BackendSources2})
+ADD_EXECUTABLE(DebsSBXTester ${DebsSBXTesterSources} ${AllSourcesT})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
@@ -50,7 +62,7 @@ SET (DebsPolynomialMutationTesterSources
     DebsPolynomialMutationTester.cpp
 )
 
-ADD_EXECUTABLE(DevsPolynomialMutationTester ${DebsPolynomialMutationTesterSources} ${BackendSources2})
+ADD_EXECUTABLE(DevsPolynomialMutationTester ${DebsPolynomialMutationTesterSources} ${AllSourcesT})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
@@ -69,7 +81,7 @@ SET(FonTestProblemSources
 	TestNSGAII_FON.cpp
 )
 	
-ADD_EXECUTABLE(FonTEstProblem ${FonTestProblemSources} ${BackendSources2})
+ADD_EXECUTABLE(FonTEstProblem ${FonTestProblemSources}  ${AllSourcesT})
 target_link_libraries(FonTEstProblem ${Boost_LIBRARIES})
 
 IF(USE_VTK)
@@ -88,7 +100,7 @@ SET(FonTestSources
     TestFON.cpp
 )
 
-ADD_EXECUTABLE(TestFON ${FonTestSources} ${BackendSources2})
+ADD_EXECUTABLE(TestFON ${FonTestSources}  ${AllSourcesT})
 
 set_property(TARGET TestFON PROPERTY CXX_STANDARD 11)
 
@@ -97,7 +109,7 @@ SET(DebsCrowdingCalcTestSources
     TestDebsCrowdingDistance.cpp
 )
 
-	ADD_EXECUTABLE(TestDebsCrowding ${DebsCrowdingCalcTestSources} ${BackendSources2})
+        ADD_EXECUTABLE(TestDebsCrowding ${DebsCrowdingCalcTestSources} )
 
 IF(USE_VTK)
 	if(VTK_LIBRARIES)
@@ -114,7 +126,7 @@ SET (TestParallelEvalSources
         TestParallelEvaluator.cpp
 )
 
-ADD_EXECUTABLE(TestParallelEval ${TestParallelEvalSources} ${BackendSources2})
+ADD_EXECUTABLE(TestParallelEval ${TestParallelEvalSources}  ${AllSourcesT})
 target_link_libraries(TestParallelEval ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 
 if(MPI_COMPILE_FLAGS)
@@ -134,7 +146,7 @@ SET(TestFONParallelSources
         TestFonParallel.cpp
 )
 
-ADD_EXECUTABLE(TestParallelFON ${TestFONParallelSources} ${BackendSources2})
+ADD_EXECUTABLE(TestParallelFON ${TestFONParallelSources}  ${AllSourcesT})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
@@ -164,7 +176,7 @@ SET(TestParallelSpeedup
         TestParallelSpeedup.cpp
 )
 
-ADD_EXECUTABLE(TestParallelSpeedup ${TestParallelSpeedup} ${BackendSources2})
+ADD_EXECUTABLE(TestParallelSpeedup ${TestParallelSpeedup}  ${AllSourcesT} ${AllSourcesT})
 IF(USE_VTK)
     if(VTK_LIBRARIES)
         target_link_libraries(TestParallelSpeedup ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})

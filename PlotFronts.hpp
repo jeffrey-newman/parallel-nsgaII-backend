@@ -179,8 +179,7 @@ class PlotFrontVTK
     
 public:
     
-    PlotFrontVTK() :
- 
+    PlotFrontVTK()
     {
         
 
