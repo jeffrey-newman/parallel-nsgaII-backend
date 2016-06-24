@@ -66,6 +66,8 @@ int main(int argc, char* argv[])
     ProblemDefinitions defs(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0);
     Individual parent1(defs);
     Individual parent2(defs);
+    parent1.setRealDV(0,2);
+    parent2.setRealDV(0,5);
     
     std::vector<double> results;
     

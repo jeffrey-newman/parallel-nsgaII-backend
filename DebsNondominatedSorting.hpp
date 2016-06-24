@@ -9,26 +9,43 @@
 #ifndef DebsNondominatedSorting_h
 #define DebsNondominatedSorting_h
 
+
+//class DebsNonDominatesSorting
+//{
+
+//public:
+
+//    static
+//    std::vector<std::vector<IndividualPtr> >
+//    sort(PopulationSPtr pop);
+
+//    static
+//    std::vector<Population>
+//    sort(Population population_ptrs);
+//};
+
 #include <iostream>
 #include "Types.hpp"
 #include <vector>
+#include "Comparator.hpp"
 
-class DominationInfo;
 
 class DominationInfo
 {
 public:
-    IndividualPtr ind;
+    IndividualSPtr ind;
     std::vector<DominationInfo *> dominates;
     int dominated;
 };
 
 
 std::vector<DominationInfo * > dummy_front1;
-std::vector<IndividualPtr> dummy_front2;
+Population dummy_front2;
 
 const int P_DOMINATES = 1;
 const int Q_DOMINATES = 2;
+
+
 
 class DebsNonDominatesSorting
 {
@@ -38,16 +55,16 @@ private:
 public:
     
     static
-    std::vector<std::vector<IndividualPtr> >
+    FrontsSPtr
     sort(PopulationSPtr pop)
     {
         
-                return (sort(pop->getVectorOfPointers()));
+                return (sort(*pop));
     }
     
     static
-    std::vector<std::vector<IndividualPtr> >
-    sort(std::vector<IndividualPtr> population_ptrs)
+    FrontsSPtr
+    sort(const Population & population_ref)
     {
         /***********************************************************************
          *              NON-DOMINATED-SORTING                                  *
@@ -56,14 +73,14 @@ public:
         
     
         
-        std::vector<DominationInfo> population_set(population_ptrs.size());
-        for (int i = 0; i < population_ptrs.size(); ++i)
+        std::vector<DominationInfo> population_set(population_ref.size());
+        for (int i = 0; i < population_ref.size(); ++i)
         {
-            population_set[i].ind =  population_ptrs[i];
+            population_set[i].ind =  population_ref[i];
         }
         
         
-        std::vector< std::vector<IndividualPtr> > fronts(1);
+        FrontsSPtr fronts(new std::vector<Front>(1));
         std::vector<std::vector<DominationInfo * > > front_sets(1);
         
         
@@ -72,18 +89,18 @@ public:
         
         BOOST_FOREACH(DominationInfo & p, population_set)
         {
-            IndividualPtr p_ptr = p.ind;
+            IndividualSPtr p_ptr = p.ind;
             int & p_dominated_by = p.dominated;
             p_dominated_by = 0;
             std::vector<DominationInfo *> & p_dominates = p.dominates;
             
             BOOST_FOREACH(DominationInfo & q, population_set)
             {
-                IndividualPtr q_ptr = q.ind;
+                IndividualSPtr q_ptr = q.ind;
                 if (p_ptr != q_ptr)
                 {
                     //If p dominates q
-                    int compare = Comparator::whichDominates(*p_ptr,*q_ptr);
+                    int compare = Comparator::whichDominates(p_ptr,q_ptr);
                     if (compare == P_DOMINATES)
                     {
                         p_dominates.push_back(&q);
@@ -97,7 +114,7 @@ public:
             if (p_dominated_by == 0)
             {
                 front_sets[0].push_back(&p);
-                fronts[0].push_back(p_ptr);
+                (*fronts)[0].push_back(p_ptr);
                 p_ptr->setRank(1);
                 
             }
@@ -110,7 +127,7 @@ public:
         while (front_sets[i].size() != 0)
         {
             front_sets.push_back(dummy_front1);
-            fronts.push_back(dummy_front2);
+            fronts->push_back(dummy_front2);
             BOOST_FOREACH(DominationInfo * p, front_sets[i])
             {
                 BOOST_FOREACH(DominationInfo * q, p->dominates)
@@ -121,7 +138,7 @@ public:
                     if (q->dominated == 0)
                     {
                         front_sets[i+1].push_back(q);
-                        fronts[i+1].push_back(q->ind);
+                        (*fronts)[i+1].push_back(q->ind);
                         q->ind->setRank(i+2);
                     }
                 }
@@ -129,9 +146,9 @@ public:
             ++i;
         }
         
-        if (fronts.back().size() == 0)
+        if (fronts->back().size() == 0)
         {
-            fronts.pop_back();
+            fronts->pop_back();
         }
         
         return (fronts);

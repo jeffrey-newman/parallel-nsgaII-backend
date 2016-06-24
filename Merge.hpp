@@ -17,7 +17,7 @@ class DistanceComparator
             
 public:
             
-     inline bool operator()(const std::pair<Individual *, double> & first, const std::pair<Individual *, double> & second)
+     inline bool operator()(const std::pair<IndividualSPtr, double> & first, const std::pair<IndividualSPtr, double> & second)
      {
          return (first.second > second.second);
      }
@@ -26,54 +26,38 @@ public:
 
 class DebsRankingAndCrowdingSelector
 {
-private:
-    
-    std::vector<std::vector<IndividualPtr> > front_sets;
+
     
 public:
-    
-    DebsRankingAndCrowdingSelector() :
-    front_sets(0)
-    {
-        
-    }
-    
-    std::vector<std::vector<IndividualPtr> > &
-    getFronts()
-    {
-        return (front_sets);
-    }
-    
+
     PopulationSPtr
     operator()(PopulationSPtr previous_parent_pop, PopulationSPtr previous_child_pop)
     {
         // Combine parent and offspring population
-        std::vector<IndividualPtr> combined_set;
+        Population combined_set;
         for (int i = 0; i < previous_parent_pop->populationSize(); ++i)
         {
-            combined_set.push_back(previous_parent_pop->getPointer2Member(i));
+            combined_set.push_back((*previous_parent_pop)[i]);
         }
         for (int i = 0; i < previous_child_pop->populationSize(); ++i)
         {
-            combined_set.push_back(previous_child_pop->getPointer2Member(i));
+            combined_set.push_back((*previous_child_pop)[i]);
         }
         
-        // Sort the solutions into front sets
-        front_sets = DebsNonDominatesSorting::sort(combined_set);
-        
+        FrontsSPtr front_sets = combined_set.getFronts();
         /***********************************************************************
          *                      New Population                                 *
          **********************************************************************/
         PopulationSPtr new_child_pop(new Population);
         int i = 0;
         // until the parent population is filled...
-        while (new_child_pop->populationSize() + front_sets[i].size() <= previous_child_pop->populationSize())
+        while (new_child_pop->populationSize() + (*front_sets)[i].size() <= previous_child_pop->populationSize())
         {
             // assign distances (needed for tournament selection)
-            DebsCrowdingDistance::calculate(front_sets[i]);
-            BOOST_FOREACH(IndividualPtr ind, front_sets[i])
+            DebsCrowdingDistance::calculate((*front_sets)[i]);
+            BOOST_FOREACH(IndividualSPtr ind, (*front_sets)[i])
             {
-                new_child_pop->push_back(*ind);
+                new_child_pop->push_back(ind);
             }
             ++i;
         }
@@ -82,7 +66,7 @@ public:
         
         if (more_ind_need > 0)
         {
-            std::vector<std::pair<IndividualPtr, double> > distances = DebsCrowdingDistance::calculate(front_sets[i]);
+            std::vector<std::pair<IndividualSPtr, double> > distances = DebsCrowdingDistance::calculate((*front_sets)[i]);
             
             //sort by crowding distance in the next dominated set (sorts descendingly)
             DistanceComparator dist_comparator;
@@ -90,7 +74,7 @@ public:
             //fill up the new population with solutions with the greatest distance
             for (int l = 0; l < more_ind_need; ++l)
             {
-                new_child_pop->push_back(*((distances[l]).first));
+                new_child_pop->push_back(distances[l].first);
             }
         }
         

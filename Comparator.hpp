@@ -9,13 +9,16 @@
 #ifndef Comparator_h
 #define Comparator_h
 
+#include "Individual.hpp"
+#include <tuple>
+
 class Comparator
 {
 public:
     
     static
     bool
-    compareObjective(Individual & ind1, Individual & ind2, int index)
+    compareObjective(const Individual& ind1, const Individual& ind2, int index)
     {
         if (ind1.isMinimiseOrMaximise(index) == MINIMISATION)
         {
@@ -25,8 +28,20 @@ public:
     }
     
     static
-    int
-    whichDominates(Individual & ind1, Individual & ind2)
+    bool
+    compareObjective(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
+    {
+        compareObjective(*ind1, *ind2, index);
+    }
+
+    static int
+    whichDominates(const IndividualSPtr ind1, const IndividualSPtr ind2)
+    {
+        return whichDominates(*ind1, *ind2);
+    }
+
+    static int
+    whichDominates(const Individual & ind1, const Individual & ind2)
     {
         // Calculate the number of constraints violated, and the relative amount of violation.
         int ind1_num_constr_violatn = 0;
@@ -143,10 +158,43 @@ public:
     }
 
     bool
-    operator()(Individual & ind1, Individual & ind2)
+    operator()(const IndividualSPtr ind1, const IndividualSPtr ind2)
+    {
+        return this->operator ()(*ind1, *ind2);
+    }
+
+    bool
+    operator()(const Individual & ind1, const Individual & ind2)
     {
         if (whichDominates(ind1, ind2) == 1) return true;
         return false;
+    }
+};
+
+class ObjectiveValueCompator
+{
+    int objective_index;
+
+public:
+    ObjectiveValueCompator(int _objective_index)
+    : objective_index(_objective_index)
+    {
+
+    }
+
+    inline bool operator()(const std::pair<IndividualSPtr, double> & first, const std::pair<IndividualSPtr, double> & second)
+    {
+        return (Comparator::compareObjective((first.first), (second.first), objective_index));
+    }
+
+    inline bool operator()(const IndividualSPtr first, const IndividualSPtr second)
+    {
+        return (Comparator::compareObjective(first, second, objective_index));
+    }
+
+    inline bool operator()(const Individual & first, const Individual & second)
+    {
+        return (Comparator::compareObjective(first, second, objective_index));
     }
 };
 

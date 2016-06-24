@@ -20,7 +20,7 @@ public:
     virtual bool operator() (PopulationSPtr population) = 0;
 };
 
-BOOST_SERIALIZATION_ASSUME_ABSTRACT( CheckpointBase );
+BOOST_SERIALIZATION_ASSUME_ABSTRACT( CheckpointBase )
 
 class DummyCheckpoint : public CheckpointBase
 {

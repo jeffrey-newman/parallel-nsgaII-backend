@@ -13,8 +13,8 @@
 #include <tuple>
 #include <chrono>
 #include <thread>
-#include "Evaluation.hpp"
-#include "ProblemDefinitions.hpp"
+#include "../Evaluation.hpp"
+#include "../ProblemDefinitions.hpp"
 
 class FON : public ObjectivesAndConstraintsBase
 {
@@ -38,11 +38,11 @@ private:
 public:
     FON()
     :   num_objectives(2),
-        num_real_decision_vars(3),
+        num_real_decision_vars(2),
         num_int_decision_vars(0),
         num_constraints(0),
-        min_dv_value(1),
-        max_dv_value(5),
+        min_dv_value(-4),
+        max_dv_value(4),
         prob_defs(num_real_decision_vars, min_dv_value, max_dv_value,  num_int_decision_vars, 0, 0, num_objectives, MINIMISATION, num_constraints),
     objectives_and_constrataints(std::piecewise_construct, std::make_tuple(num_objectives, std::numeric_limits<double>::max()), std::make_tuple(num_constraints))
     {

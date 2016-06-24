@@ -79,65 +79,30 @@ public:
     PopulationSPtr
     operator()(PopulationSPtr parents)
     {
-        // previous_gen is the initialised population.
+
+#ifdef WITH_VTK
+        PlotFrontVTK plot_front1;
+#endif
+        PopulationSPtr children( (Population *) NULL);
         pop_eval(parents);
-        std::vector<std::vector<IndividualPtr> > fronts = DebsNonDominatesSorting::sort(parents);
-        
-        BOOST_FOREACH(std::vector<IndividualPtr> front, fronts)
-        {
-            DebsCrowdingDistance::calculate(front);
-        }
-//        plot_front1(fronts);
-        
-        // Make the breeding population using selection, crossover and mutation.
-        PopulationSPtr children = selection(parents);
-        crossover(children);
-        mutation(children);
-        pop_eval(children);
-        PopulationSPtr previous_gen( (Population *) NULL);
-        previous_gen = parents;
-        parents = children;
-        children = selection(merge_calc_front_and_dist(previous_gen, parents));
-        pop = children;
 
-#ifdef WITH_VTK
-        boost::scoped_ptr<PlotFrontVTK> plot((PlotFrontVTK *) NULL);
-        if (do_visualise == ON) plot.reset(new PlotFrontVTK);
-#endif
-        
-        
+
+
         do {
-
-#ifdef WITH_VTK
-            if (do_visualise == ON) (*plot)(merge_calc_front_and_dist.getFronts());
-#endif
-            
+            std::cout << "parents: \n" << parents;
+            children = selection(parents);
+            std::cout << "\n\n\nAfter selection: \n" << children;
             crossover(children);
+            std::cout << "\n\n\nAfter crossover: \n" << children;
             mutation(children);
             pop_eval(children);
-            previous_gen = parents;
+            std::cout << "\n\n\nAfter mutation: \n" << children;
+            children = merge_calc_front_and_dist(parents, children);
+            std::cout << "After merge: \n" << children;
             parents = children;
-            children = merge_calc_front_and_dist(previous_gen, parents);
-            pop = children;
-//            fronts = DebsNonDominatesSorting::sort(children);
-//            PlotFrontVTK plot2;
-//            plot2(fronts);
-//            std::cout << "Population size: " << children->populationSize() << std::endl;
         } while (my_checkpoints(children));
-
-//        pop_eval(pop);
-        fronts = DebsNonDominatesSorting::sort(pop);
         
-        BOOST_FOREACH(std::vector<IndividualPtr> front, fronts)
-        {
-            DebsCrowdingDistance::calculate(front);
-        }
-        
-#ifdef WITH_VTK
-        if (do_visualise == ON) (*plot)(fronts);
-#endif
-        
-        return (pop);
+        return (children);
         
     }
 

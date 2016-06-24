@@ -27,34 +27,34 @@ private:
     RNG & random_number_gen;
     
     
-    Individual &
-    tournament(Individual * ind1, Individual * ind2)
+    IndividualSPtr
+    tournament(IndividualSPtr ind1, IndividualSPtr ind2)
     {
         int flag;
-        flag = Comparator::whichDominates(*ind1, *ind2);
+        flag = Comparator::whichDominates(ind1, ind2);
         if (flag==1)
         {
-            return (*ind1);
+            return (ind1);
         }
         if (flag==2)
         {
-            return (*ind2);
+            return (ind2);
         }
         if (ind1->getCrowdingScore() > ind2->getCrowdingScore())
         {
-            return(*ind1);
+            return(ind1);
         }
         if (ind2->getCrowdingScore() > ind1->getCrowdingScore())
         {
-            return(*ind2);
+            return(ind2);
         }
         if ( sel_uniform(random_number_gen) <= 0.5)
         {
-            return(*ind1);
+            return(ind1);
         }
         else
         {
-            return(*ind2);
+            return(ind2);
         }
     }
     
@@ -68,11 +68,11 @@ public:
     PopulationSPtr
     operator()(PopulationSPtr parent_pop)
     {
-        std::vector<IndividualPtr> a1, a2;
+        std::vector<IndividualSPtr> a1, a2;
         for (int i = 0; i < parent_pop->populationSize(); ++i)
         {
-            a1.push_back(parent_pop->getPointer2Member(i));
-            a2.push_back(parent_pop->getPointer2Member(i));
+            a1.push_back((*parent_pop)[i]);
+            a2.push_back((*parent_pop)[i]);
         }
         
         std::shuffle(a2.begin(), a2.end(), random_number_gen);
@@ -81,7 +81,7 @@ public:
         PopulationSPtr child_pop(new Population);
         for (int i = 0; i < parent_pop->populationSize(); ++i)
         {
-            child_pop->push_back(tournament(a1[i], a2[i]));
+            child_pop->push_back(IndividualSPtr( new Individual(*(tournament(a1[i], a2[i])))));
         }
         
         return (child_pop);

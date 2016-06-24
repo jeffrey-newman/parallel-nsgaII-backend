@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <iostream>
 
-#include "../TestFunctions.hpp"
+#include "../SampleProblems/TestFunctions.hpp"
 
 int main(int argc, char* argv[])
 {

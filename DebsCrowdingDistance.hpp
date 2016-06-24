@@ -15,22 +15,7 @@
 #include "Comparator.hpp"
 #include "DebsNondominatedSorting.hpp"
 
-class ObjectiveValueCompator
-{
-    int objective_index;
-    
-public:
-    ObjectiveValueCompator(int _objective_index)
-    : objective_index(_objective_index)
-    {
-        
-    }
-    
-    inline bool operator()(const std::pair<IndividualPtr, double> & first, const std::pair<IndividualPtr, double> & second)
-    {
-        return (Comparator::compareObjective(*(first.first), *(second.first), objective_index));
-    }
-};
+
 
 
 
@@ -41,12 +26,12 @@ class DebsCrowdingDistance
 public:
     
     static
-    std::vector< std::vector<std::pair<IndividualPtr, double > > >
+    std::vector< std::vector<std::pair<IndividualSPtr, double > > >
     calculate(const PopulationSPtr pop)
     {
-        std::vector< std::vector<std::pair<IndividualPtr, double > > > crowd_dist_by_front;
-        std::vector<std::vector<IndividualPtr> > fronts = DebsNonDominatesSorting::sort(pop);
-        BOOST_FOREACH(std::vector<IndividualPtr> front, fronts)
+        std::vector< std::vector<std::pair<IndividualSPtr, double > > > crowd_dist_by_front;
+        FrontsSPtr fronts = pop->getFronts();
+        BOOST_FOREACH(Front front, *fronts)
         {
             crowd_dist_by_front.push_back(calculate(front));
         }
@@ -54,14 +39,14 @@ public:
     }
 
     static
-    std::vector<std::pair<IndividualPtr, double > >
-    calculate(const std::vector<IndividualPtr> & front_set)
+    std::vector<std::pair<IndividualSPtr, double > >
+    calculate(const Population & front_set)
     {
         
         //Fill up remainder of population from the next dominated set, based on crowding distance
-        typedef std::pair<IndividualPtr, double> IndDistPair;
+        typedef std::pair<IndividualSPtr, double> IndDistPair;
         std::vector<IndDistPair> distances;
-        BOOST_FOREACH(IndividualPtr ind, front_set)
+        BOOST_FOREACH(IndividualSPtr ind, front_set)
         {
             distances.push_back(std::make_pair(ind, 0));
         }

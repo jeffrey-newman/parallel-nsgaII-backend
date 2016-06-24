@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 #include "../Individual.hpp"
-#include "../TestFunctions.hpp"
+#include "../SampleProblems/TestFunctions.hpp"
 
 //#include <boost/config.hpp>
 //#if defined(BOOST_NO_STDC_NAMESPACE)

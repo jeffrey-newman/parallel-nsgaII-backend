@@ -90,8 +90,8 @@ public:
         std::vector<boost::mpi::request> reqs_out(number_clients);
         for (; individual < number_clients; ++individual)
         {
-            decision_vars.first = (*population)[individual].getRealDVVector();
-            decision_vars.second = (*population)[individual].getIntDVVector();
+            decision_vars.first = (*population)[individual]->getRealDVVector();
+            decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
 //            std::cout << "sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
             world.send(client_id, individual, dv_c);
@@ -102,11 +102,11 @@ public:
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
 //            std::cout << "received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
-            (*population)[s.tag()].setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()].setConstraints(objs_and_constraints.second);
+            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
             
-            decision_vars.first = (*population)[individual].getRealDVVector();
-            decision_vars.second = (*population)[individual].getIntDVVector();
+            decision_vars.first = (*population)[individual]->getRealDVVector();
+            decision_vars.second = (*population)[individual]->getIntDVVector();
             world.send(s.source(), individual, dv_c);
 
             ++individual;
@@ -115,8 +115,8 @@ public:
         for (int i = 0; i < number_clients; ++i)
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            (*population)[s.tag()].setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()].setConstraints(objs_and_constraints.second);
+            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
         }
     
     }

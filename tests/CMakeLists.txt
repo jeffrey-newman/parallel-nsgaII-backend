@@ -1,22 +1,28 @@
 SET(BackendSourcesT
         ../Checkpoint.hpp
-        ../colours.hpp
+
         ../Comparator.hpp
         ../Crossover.hpp
+        ../DebsCrowdingDistance.hpp
+        ../DebsNondominatedSorting.hpp
+        ../Evaluation.hpp
         ../Individual.hpp
+        ../Merge.hpp
         ../Mutation.hpp
-        ../parallel_nsgaII_backend.cpp
-        ../parallel_nsgaII_backend.hpp
-        ../parallel_nsgaII_backendPriv.hpp
-        ../Population.hpp
-        ../Types.hpp
         ../NSGAII.hpp
+        ../ParallelEvaluator.hpp
+        ../Population.hpp
+        ../ProblemDefinitions.hpp
+        ../Selection.hpp
+        ../Types.hpp
         )
 
 SET(CheckpointsSourcesT
         ../Checkpoints/MaxGenCheckpoint.hpp
         ../Checkpoints/SavePopCheckpoint.hpp
         ../Checkpoints/SerialiseCheckpoint.hpp
+        ../Checkpoints/PlotFronts.hpp
+        ../Checkpoints/colours.hpp
         )
 
 SET(SerializationSourcesT
@@ -30,11 +36,16 @@ SET(MetricSourcesT
         ../Metrics/Hypervolume.hpp
         )
 
+SET(SampleProblemsT
+        ../SampleProblems/TestFunctions.hpp
+        )
+
 SET(AllSourcesT
         ${CheckpointsSourcesT}
         ${SerializationSourcesT}
         ${BackendSourcesT}
         ${MetricSourcesT}
+        ${SampleProblemsT}
         )
 
 SET( DebsSBXTesterSources

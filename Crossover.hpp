@@ -122,6 +122,7 @@ public:
     void
     operator()(PopulationSPtr pop)
     {
+        pop->invalidate();
         std::shuffle(pop->begin(), pop->end(), random_number_gen);
         
         for (int i = 0; i < pop->size() / 2; i = i + 2)
@@ -129,9 +130,9 @@ public:
             
             if (cross_uniform(random_number_gen) <= probability_crossover)
             {
-                Individual & parent1 = (*pop)[i];
-                Individual & parent2 = (*pop)[i+1];
-                crossover_implementation(parent1, parent2);
+                IndividualSPtr parent1 = (*pop)[i];
+                IndividualSPtr parent2 = (*pop)[i+1];
+                crossover_implementation(*parent1, *parent2);
             }
         }
         

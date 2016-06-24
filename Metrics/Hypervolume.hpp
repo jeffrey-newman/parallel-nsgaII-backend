@@ -13,6 +13,9 @@
 
 class Hypervolume : public CheckpointBase
 {
+public:
+
+    enum DoTerminate {TERMINATION, NO_TERMINATION};
 private:
     std::vector<double> ref_point;
     int dimension;
@@ -23,16 +26,34 @@ private:
     boost::filesystem::path log_path;
     int generation;
     int gen_frequency;
+    DoTerminate do_terminate;
+    int gens_no_improvement;
+    int max_gens_no_improvement;
+    double best_hypervolume;
 
 
 public:
-    Hypervolume(std::vector<double> & _ref_point, boost::filesystem::path log_dir, int _gen_frequency = 1)
-        : ref_point(_ref_point), dimension(_ref_point.size()), ref_point_array(new double[dimension]),
-         volume(0), dataNumber(0), generation(0), gen_frequency(_gen_frequency)
+    Hypervolume(std::vector<double> & _ref_point,
+                boost::filesystem::path log_dir,
+                int _gen_frequency = 1,
+                DoTerminate _do_terminate = NO_TERMINATION,
+                int _max_gen_no_improvement = 100)
+        : ref_point(_ref_point), dimension(_ref_point.size()),
+          ref_point_array(new double[dimension]), volume(0), dataNumber(0), generation(0),
+          gen_frequency(_gen_frequency), do_terminate(_do_terminate),
+          max_gens_no_improvement(_max_gen_no_improvement),
+          best_hypervolume(std::numeric_limits<double>::min())
     {
         for (int var = 0; var < ref_point.size(); ++var)
         {
-            ref_point_array[var] = ref_point[var];
+            ref_point_array[var] = 0.0;
+        }
+
+        if (gens_no_improvement / gen_frequency < 3)
+        {
+            std::cout << "Warning: In Hypervolume checkpoint, termination "
+                         "results based on only three calculations of the hypervolume"
+                      << std::endl;
         }
     }
 
@@ -51,28 +72,49 @@ public:
     {
         // initialize volume
         ++generation;
-        dataNumber = population->size();
-        assert(population->at(0).numberOfObjectives() == dimension);
-        double* data = new double[dataNumber * dimension];
-        int i = 0;
-        BOOST_FOREACH(Individual & ind, *population)
-        {
-            BOOST_FOREACH(const double & obj, ind.getObjectives())
-            {
-                data[i++] = obj;
-            }
-        }
-        volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
-        hypervolume_log.insert(std::make_pair(generation, volume));
+
 
         if (generation % gen_frequency == 0)
         {
+            dataNumber = population->size();
+            assert(population->at(0)->numberOfObjectives() == dimension);
+            double* data = new double[dataNumber * dimension];
+            int i = 0;
+            BOOST_FOREACH(IndividualSPtr ind, *population)
+            {
+                for (int i = 0; i < ind->numberOfObjectives(); ++i)
+                {
+                    if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
+                    {
+                        data[i++] = ref_point[i] - ind->getObjective(i);
+                    }
+                    else
+                    {
+                        data[i++] = ind->getObjective(i) - ref_point[i];
+                    }
+
+                }
+            }
+            volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
+            hypervolume_log.insert(std::make_pair(generation, volume));
+
             boost::filesystem::path save_file = log_path / ("hypervolume.xml");
             std::ofstream ofs(save_file.c_str());
             assert(ofs.good());
             boost::archive::xml_oarchive oa(ofs);
             oa << boost::serialization::make_nvp("hypervolume", *this);
             ofs.close();
+        }
+
+        if (do_terminate = TERMINATION)
+        {
+            if (volume > best_hypervolume)
+            {
+                best_hypervolume = volume;
+                gens_no_improvement = 0;
+            }
+            if (volume < best_hypervolume) ++gens_no_improvement;
+            if (gens_no_improvement > max_gens_no_improvement) return false;
         }
 
         return true;
@@ -82,9 +124,9 @@ public:
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-            ar & boost::serialization::make_nvp("ref_point", ref_point);
-            ar & boost::serialization::make_nvp("hypervolumes", hypervolume_log);
-//            ar & BOOST_SERIALIZATION_NVP(log_path);
+        ar & boost::serialization::make_nvp("ref_point", ref_point);
+        ar & boost::serialization::make_nvp("hypervolumes", hypervolume_log);
+        //            ar & BOOST_SERIALIZATION_NVP(log_path);
     }
 };
 

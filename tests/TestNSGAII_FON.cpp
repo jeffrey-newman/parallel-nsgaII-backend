@@ -11,11 +11,12 @@
 #include <sstream>
 
 #include "../Types.hpp"
-#include "../TestFunctions.hpp"
+#include "../SampleProblems/TestFunctions.hpp"
 #include "../NSGAII.hpp"
 //#include "../Checkpoints/SerialiseCheckpoint.hpp"
 #include "../Checkpoints/SavePopCheckpoint.hpp"
 #include "../Checkpoints/MaxGenCheckpoint.hpp"
+#include "../Checkpoints/PlotFronts.hpp"
 #include "../Metrics/Hypervolume.hpp"
 #include <boost/timer/timer.hpp>
 #include <boost/filesystem.hpp>
@@ -50,18 +51,20 @@ int main(int argc, char* argv[])
     RNG rng(seed);
     
     // The optimiser
-    int max_gen = 10;
+    int max_gen = 1000;
     NSGAII<RNG> optimiser(rng, test_problem);
     MaxGenCheckpoint max_gen_terminate(max_gen);
     SavePopCheckpoint save_pop(1, working_dir);
     std::vector<double> ref_point = {1, 1};
-    Hypervolume hvol(ref_point, working_dir);
+    Hypervolume hvol(ref_point, working_dir, 1, Hypervolume::TERMINATION, 50);
+    PlotFrontVTK plotfront;
 //    SerialiseCheckpoint<NSGAII<RNG> > save_state(1, optimiser, working_dir);
     optimiser.add_checkpoint(max_gen_terminate);
 //    optimiser.add_checkpoint(save_state);
     optimiser.add_checkpoint(save_pop);
     optimiser.add_checkpoint(hvol);
-    //        optimiser.visualise();
+    optimiser.add_checkpoint(plotfront);
+//    optimiser.visualise();
     
     // Initialise population
     int pop_size = 128	;

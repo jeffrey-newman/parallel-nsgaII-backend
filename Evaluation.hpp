@@ -57,13 +57,13 @@ public:
     void
     operator()(PopulationSPtr population)
     {
-        BOOST_FOREACH(Individual & ind, *population)
+        BOOST_FOREACH(IndividualSPtr ind, *population)
         {
             std::vector<double> objectives;
             std::vector<double> constraints;
-            std::tie(objectives, constraints) = eval(ind.getRealDVVector(), ind.getIntDVVector());
-            ind.setObjectives(objectives);
-            ind.setConstraints(constraints);
+            std::tie(objectives, constraints) = eval(ind->getRealDVVector(), ind->getIntDVVector());
+            ind->setObjectives(objectives);
+            ind->setConstraints(constraints);
             
             // Too much copying of data in this function...
         }

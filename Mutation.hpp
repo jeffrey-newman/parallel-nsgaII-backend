@@ -83,9 +83,10 @@ public:
     void
     operator()(PopulationSPtr & parent_pop)
     {
+        parent_pop->invalidate();
         for (int i = 0; i < parent_pop->size(); ++i)
         {
-                mutation_implementation((*parent_pop)[i]);
+                mutation_implementation(*((*parent_pop)[i]));
         }
         
         

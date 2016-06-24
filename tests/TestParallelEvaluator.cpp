@@ -11,7 +11,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
 #include "../ParallelEvaluator.hpp"
-#include "../TestFunctions.hpp"
+#include "../SampleProblems/TestFunctions.hpp"
 
 
 
@@ -39,9 +39,9 @@ int main(int argc, char* argv[])
         //send population to evaluator server
         eval_server(pop);
         
-        BOOST_FOREACH(Individual & ind, *pop)
+        BOOST_FOREACH(IndividualSPtr ind, *pop)
         {
-            std::cout << ind.getRealDV(0) << "\t" << ind.getRealDV(1) << "\t" << ind.getRealDV(2) << "\t" << ind.getObjective(0)  << "\t" << ind.getObjective(1) << std::endl;
+            std::cout << ind->getRealDV(0) << "\t" << ind->getRealDV(1) << "\t" << ind->getRealDV(2) << "\t" << ind->getObjective(0)  << "\t" << ind->getObjective(1) << std::endl;
         }
         
     }

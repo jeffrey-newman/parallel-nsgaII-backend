@@ -14,7 +14,7 @@
 #include <chrono>
 #include <random>
 #include "../ParallelEvaluator.hpp"
-#include "../TestFunctions.hpp"
+#include "../SampleProblems/TestFunctions.hpp"
 #include "../NSGAII.hpp"
 #include "../Checkpoints/MaxGenCheckpoint.hpp"
 

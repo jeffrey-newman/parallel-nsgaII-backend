@@ -14,6 +14,7 @@
 #include <boost/archive/tmpdir.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/foreach.hpp>
 
 class Individual
 {
@@ -102,6 +103,12 @@ public:
         objectives = objs;
     }
     
+    const std::vector<double> &
+    getConstraints() const
+    {
+        return constraints;
+    }
+
     void
     setConstraints(std::vector<double> cons)
     {
@@ -191,22 +198,22 @@ public:
         crowding_score = score;
     }
     
-    const double & getRealUpperBound(const int index)
+    const double & getRealUpperBound(const int index) const
     {
         return (definitions.real_upperbounds[index]);
     }
     
-    const double & getRealLowerBound(const int index)
+    const double & getRealLowerBound(const int index) const
     {
         return (definitions.real_lowerbounds[index]);
     }
     
-    const int getIntUpperBound(const int index)
+    const int getIntUpperBound(const int index) const
     {
         return (definitions.int_upperbounds[index]);
     }
     
-    const int getIntLowerBound(const int index)
+    const int getIntLowerBound(const int index) const
     {
         return (definitions.int_lowerbounds[index]);
     }
@@ -221,12 +228,12 @@ public:
         return (int_decision_variables.size());
     }
     
-    const unsigned long numberOfObjectives()
+    const unsigned long numberOfObjectives() const
     {
         return (objectives.size());
     }
     
-    const unsigned long numberOfConstraints()
+    const unsigned long numberOfConstraints() const
     {
         return (constraints.size());
     }
@@ -243,9 +250,46 @@ public:
             ar & BOOST_SERIALIZATION_NVP(crowding_score);
     }
 
+    friend std::ostream& operator<<(std::ostream& os, const Individual& Individual);
 };
 
+//typedef Individual * IndividualPtr;
+typedef boost::shared_ptr<Individual> IndividualSPtr;
 
-typedef Individual * IndividualPtr;
+std::ostream& operator<<(std::ostream& os, const IndividualSPtr ind)
+{
+    os << *ind;
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Individual & ind)
+{
+    os << "[ ";
+
+    BOOST_FOREACH(const int & idv, ind.getIntDVVector())
+    {
+        os << idv << " ";
+    }
+    os << ";\t";
+    BOOST_FOREACH(const double & ddv, ind.getRealDVVector())
+    {
+        os << ddv << " ";
+    }
+    os << "]\t->\t(";
+    BOOST_FOREACH(const double & obj, ind.getObjectives())
+    {
+        os << obj << " ";
+    }
+    os << ";\t";
+    BOOST_FOREACH(const double & cnstrnt, ind.getConstraints())
+    {
+        os << cnstrnt << " ";
+    }
+    os << ")\t";
+    os << "Rank: " << ind.getRank() << "\tCrowdingDist: " << ind.getCrowdingScore();
+    return os;
+}
+
+
 
 #endif /* Individual_h */

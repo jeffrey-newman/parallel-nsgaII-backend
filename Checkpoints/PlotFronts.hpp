@@ -32,9 +32,12 @@
 
 #include "colours.hpp"
 
+#include "../Population.hpp"
+#include "../Checkpoint.hpp"
 
 
-class PlotFrontVTK
+
+class PlotFrontVTK : public CheckpointBase
 {
     vtkSmartPointer<vtkContextView> view;
     vtkSmartPointer<vtkChartXY> chart;
@@ -64,23 +67,24 @@ public:
     ~PlotFrontVTK()
     {
 //        view->GetInteractor()->Initialize();
-        view->GetInteractor()->Start();
+//        view->GetInteractor()->Start();
     }
     
-    void
-    operator()(std::vector<std::vector<IndividualPtr> > fronts)
+    bool
+    operator()(PopulationSPtr pop)
     {
+        FrontsSPtr fronts = pop->getFronts();
         front_tables.clear();
         obj_data.clear();
         crowd_dist_labels.clear();
         chart->ClearPlots();
         
-        int num_objectives = fronts.front().front()->numberOfObjectives();
-        int number_of_fronts = fronts.size();
+        int num_objectives = fronts->front().front()->numberOfObjectives();
+        int number_of_fronts = fronts->size();
         
         for (int i = 0; i < number_of_fronts; ++i)
         {
-            int front_size = fronts[i].size();
+            int front_size = (*fronts)[i].size();
             
             if (front_size > 0)
             {
@@ -104,25 +108,25 @@ public:
                 crowd_dist_label->SetName("Ind: ");
                 table->AddColumn(crowd_dist_label);
                 
-                table->SetNumberOfRows(fronts[i].size());
+                table->SetNumberOfRows((*fronts)[i].size());
                 
                 for (int j = 0; j < num_objectives; ++j)
                 {
                     for (int k = 0; k < front_size; ++k)
                     {
-                        table->SetValue(k, j, fronts[i][k]->getObjective(j));
+                        table->SetValue(k, j, (*fronts)[i][k]->getObjective(j));
                     }
                 }
                 
                 for (int k = 0; k < front_size; ++k)
                 {
                     std::stringstream label;
-                    for (int l = 0; l < fronts[i][k]->numberOfRealDecisionVariables(); ++l)
+                    for (int l = 0; l < (*fronts)[i][k]->numberOfRealDecisionVariables(); ++l)
                     {
-                        label << "x" << std::to_string(l+1) << ": " << fronts[i][k]->getRealDV(l) << " ";
+                        label << "x" << std::to_string(l+1) << ": " << (*fronts)[i][k]->getRealDV(l) << " ";
                     }
 //                    label.precision(4);
-                    label << "crowd_dist: " << fronts[i][k]->getCrowdingScore();
+                    label << "crowd_dist: " << (*fronts)[i][k]->getCrowdingScore();
                     table->SetValue(k, num_objectives, label.str().c_str());
                 }
             }
@@ -167,14 +171,16 @@ public:
         view->GetInteractor()->Initialize();
         view->GetInteractor()->Render();
 //        view->GetRenderWindow()->Render();
+//        view->GetInteractor()->Start();
 
+        return true;
     }
     
 
 };
 
 #else
-class PlotFrontVTK
+class PlotFrontVTK : public CheckpointBase
 {
     
 public:
@@ -191,11 +197,10 @@ public:
 
     }
     
-    void
+    bool
     operator()(std::vector<std::vector<IndividualPtr> > fronts)
     {
-        
-        
+        return true;
     }
     
     
