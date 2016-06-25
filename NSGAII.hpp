@@ -75,6 +75,12 @@ public:
     {
         my_checkpoints.addCheckpoint(&chkpnt_2_add);
     }
+
+    DebsPolynomialMutation<RNG> &
+    getRealMutationOperator()
+    {
+        return mutation;
+    }
     
     PopulationSPtr
     operator()(PopulationSPtr parents)
@@ -89,16 +95,16 @@ public:
 
 
         do {
-            std::cout << "parents: \n" << parents;
+//            std::cout << "parents: \n" << parents;
             children = selection(parents);
-            std::cout << "\n\n\nAfter selection: \n" << children;
+//            std::cout << "\n\n\nAfter selection: \n" << children;
             crossover(children);
-            std::cout << "\n\n\nAfter crossover: \n" << children;
+//            std::cout << "\n\n\nAfter crossover: \n" << children;
             mutation(children);
             pop_eval(children);
-            std::cout << "\n\n\nAfter mutation: \n" << children;
+//            std::cout << "\n\n\nAfter mutation: \n" << children;
             children = merge_calc_front_and_dist(parents, children);
-            std::cout << "After merge: \n" << children;
+//            std::cout << "After merge: \n" << children;
             parents = children;
         } while (my_checkpoints(children));
         

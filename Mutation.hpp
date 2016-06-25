@@ -12,7 +12,9 @@
 #include <random>
 #include <chrono>
 #include "Types.hpp"
+#include "Individual.hpp"
 #include <boost/serialization/nvp.hpp>
+
 
 
 
@@ -30,6 +32,8 @@ class DebsPolynomialMutation
     RNG & random_number_gen;
     double & eta_m;
     double & probability_mutation;
+    int gene_m_count = 0;
+    int gene_count = 0;
     
     
 public:
@@ -43,11 +47,15 @@ public:
     void
     mutation_implementation(Individual & individual)
     {
-        
+
+
         for (unsigned long j=0; j < individual.numberOfRealDecisionVariables(); j++)
         {
+//            ++gene_count;
             if (mut_uniform(random_number_gen) <= this->probability_mutation)
             {
+//                ++gene_m_count;
+//                individual.mutated = true;
                 double delta1, delta2, xy, val, deltaq;
                 const double & y = individual.getRealDV(j);
                 const double yl=individual.getRealLowerBound(j);//lower limt of variable j of ind i
@@ -83,13 +91,28 @@ public:
     void
     operator()(PopulationSPtr & parent_pop)
     {
+//        int ind_count= 0;
+//        int m_count = 0;
+//        gene_m_count = 0;
+//        gene_count = 0;
         parent_pop->invalidate();
         for (int i = 0; i < parent_pop->size(); ++i)
         {
-                mutation_implementation(*((*parent_pop)[i]));
+//            ++ind_count;
+            mutation_implementation(*((*parent_pop)[i]));
+//            if ((*parent_pop)[i]->mutated == true ) ++m_count;
         }
+
+//        std::cout << "Mutation: " << m_count << " of " << ind_count << " ind underwent: " << 100 * double(m_count) / ind_count << "%\n";
+//        std::cout << "Mutation: " << gene_m_count << " of " << gene_count << " genes underwent: " << 100 * double(gene_m_count) / gene_count << "%\n";
         
         
+    }
+
+    void
+    setMutationProbability(double _mutation_probability)
+    {
+        probability_mutation = _mutation_probability;
     }
 
     friend class boost::serialization::access;
@@ -100,5 +123,14 @@ public:
             ar & BOOST_SERIALIZATION_NVP(probability_mutation);
     }
 };
+
+
+template <typename RNG> void
+SetMutationInverseDVSize(IndividualSPtr _ind_sample, DebsPolynomialMutation<RNG> mutation)
+{
+    mutation.setMutationProbability(1 / double(_ind_sample->numberOfRealDecisionVariables()));
+}
+
+
 
 #endif /* Mutation_h */

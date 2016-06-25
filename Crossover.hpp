@@ -22,7 +22,7 @@
 
 
 double default_eps = 0.00001;
-double default_crossoverp = 0.7;
+double default_crossoverp = 0.9;
 double default_eta = 20.0;
 std::uniform_real_distribution<double> cross_uniform(0.0,1.0);
 double default_proportion_crossed = 0.5;
@@ -46,10 +46,27 @@ public:
     {
         
     }
+
+    void setProportionCrossed(double & _crossover_proportion)
+    {
+        proportion_crossed = _crossover_proportion;
+    }
+
+    void setEps(double & _eps)
+    {
+        eps = _eps;
+    }
+
+    void setEtaC(double & _eta_c)
+    {
+        eta_c = _eta_c;
+    }
     
     
     void crossover_implementation(Individual & individal_1, Individual & individal_2)
     {
+//        individal_1.crossovered = true;
+//        individal_2.crossovered = true;
         for (int j=0;j < individal_1.numberOfRealDecisionVariables(); ++j)
         {//for each real in chrom
             
@@ -125,17 +142,25 @@ public:
         pop->invalidate();
         std::shuffle(pop->begin(), pop->end(), random_number_gen);
         
-        for (int i = 0; i < pop->size() / 2; i = i + 2)
+//        int count = 0;
+//        int x_count = 0;
+
+        for (int i = 0; i <= pop->size()-2; i = i + 2)
         {
-            
-            if (cross_uniform(random_number_gen) <= probability_crossover)
+//            ++count;
+            double rand = cross_uniform(random_number_gen);
+//            std::cout << rand << "\n";
+            if (rand <= probability_crossover)
             {
+//                ++x_count;
                 IndividualSPtr parent1 = (*pop)[i];
                 IndividualSPtr parent2 = (*pop)[i+1];
                 crossover_implementation(*parent1, *parent2);
             }
         }
-        
+
+
+//       std::cout << "Crossover: " << x_count << " of " << count << " iterations underwent: " << 100 * double(x_count) / count << "%\n";
         
     }
 

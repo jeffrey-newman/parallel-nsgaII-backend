@@ -13,7 +13,9 @@
 #include "Individual.hpp"
 
 class Population;
+typedef boost::shared_ptr<Population> PopulationSPtr;
 typedef Population Front;
+typedef PopulationSPtr FrontSPtr;
 typedef std::vector<Front> Fronts;
 typedef boost::shared_ptr<Fronts > FrontsSPtr;
 
@@ -65,7 +67,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Population& pop);
 };
 
-typedef boost::shared_ptr<Population> PopulationSPtr;
+//typedef boost::shared_ptr<Population> PopulationSPtr;
 
 
 #include <algorithm>

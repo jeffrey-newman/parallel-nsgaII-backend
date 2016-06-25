@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.0.1, 2016-06-21T23:22:44. -->
+<!-- Written by QtCreator 4.0.1, 2016-06-25T01:51:25. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -517,6 +517,7 @@
     </valuelist>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">FonTEstProblem</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
+    <value type="bool" key="CMakeProjectManager.CMakeRunConfiguration.UseTerminal">false</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_6_1_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>

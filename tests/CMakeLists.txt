@@ -23,6 +23,7 @@ SET(CheckpointsSourcesT
         ../Checkpoints/SerialiseCheckpoint.hpp
         ../Checkpoints/PlotFronts.hpp
         ../Checkpoints/colours.hpp
+        ../Checkpoints/ResetMutationXoverFlags.hpp
         )
 
 SET(SerializationSourcesT

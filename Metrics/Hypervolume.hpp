@@ -4,6 +4,7 @@
 #include "../Checkpoint.hpp"
 #include "../Population.hpp"
 #include "../Individual.hpp"
+#include "MetricBase.hpp"
 #include "hv.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/nvp.hpp>
@@ -11,7 +12,9 @@
 #include "../Serialization/SerializeBoostPath.hpp"
 
 
-class Hypervolume : public CheckpointBase
+
+
+class Hypervolume : public MetricBase
 {
 public:
 
@@ -40,7 +43,7 @@ public:
                 int _max_gen_no_improvement = 100)
         : ref_point(_ref_point), dimension(_ref_point.size()),
           ref_point_array(new double[dimension]), volume(0), dataNumber(0), generation(0),
-          gen_frequency(_gen_frequency), do_terminate(_do_terminate),
+          gen_frequency(_gen_frequency), do_terminate(_do_terminate), gens_no_improvement(0),
           max_gens_no_improvement(_max_gen_no_improvement),
           best_hypervolume(std::numeric_limits<double>::min())
     {
@@ -49,7 +52,7 @@ public:
             ref_point_array[var] = 0.0;
         }
 
-        if (gens_no_improvement / gen_frequency < 3)
+        if (max_gens_no_improvement / gen_frequency < 3)
         {
             std::cout << "Warning: In Hypervolume checkpoint, termination "
                          "results based on only three calculations of the hypervolume"
@@ -76,25 +79,38 @@ public:
 
         if (generation % gen_frequency == 0)
         {
-            dataNumber = population->size();
+            Front first_front = population->getFronts()->at(0);
+            dataNumber = first_front.size();
             assert(population->at(0)->numberOfObjectives() == dimension);
             double* data = new double[dataNumber * dimension];
-            int i = 0;
-            BOOST_FOREACH(IndividualSPtr ind, *population)
+            int j = 0;
+            BOOST_FOREACH(IndividualSPtr ind, first_front)
             {
                 for (int i = 0; i < ind->numberOfObjectives(); ++i)
                 {
                     if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
                     {
-                        data[i++] = ref_point[i] - ind->getObjective(i);
+                        data[j++] = ind->getObjective(i) - ref_point[i];
                     }
                     else
                     {
-                        data[i++] = ind->getObjective(i) - ref_point[i];
+                        data[j++] = ref_point[i] - ind->getObjective(i);
                     }
 
                 }
             }
+
+//            std::cout << "Hypervolume transformation: \n";
+//            for (int j = 0; j < (dataNumber * dimension); j = j + dimension)
+//            {
+//                for (int k = 0; k < dimension; ++k)
+//                {
+//                    std::cout << data[j+k] << " ";
+//                }
+//                std::cout << "\n";
+//            }
+//            std::cout << std::flush;
+
             volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
             hypervolume_log.insert(std::make_pair(generation, volume));
 
@@ -106,7 +122,7 @@ public:
             ofs.close();
         }
 
-        if (do_terminate = TERMINATION)
+        if (do_terminate == TERMINATION)
         {
             if (volume > best_hypervolume)
             {
@@ -118,6 +134,12 @@ public:
         }
 
         return true;
+    }
+
+    double
+    getVal()
+    {
+        return volume;
     }
 
     friend class boost::serialization::access;

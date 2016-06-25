@@ -38,10 +38,12 @@ public:
         for (int i = 0; i < previous_parent_pop->populationSize(); ++i)
         {
             combined_set.push_back((*previous_parent_pop)[i]);
+//            (*previous_parent_pop)[i]->parent = true;
         }
         for (int i = 0; i < previous_child_pop->populationSize(); ++i)
         {
             combined_set.push_back((*previous_child_pop)[i]);
+//            (*previous_child_pop)[i]->child = true;
         }
         
         FrontsSPtr front_sets = combined_set.getFronts();

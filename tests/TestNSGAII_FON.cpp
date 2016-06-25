@@ -18,6 +18,8 @@
 #include "../Checkpoints/MaxGenCheckpoint.hpp"
 #include "../Checkpoints/PlotFronts.hpp"
 #include "../Metrics/Hypervolume.hpp"
+#include "../Checkpoints/ResetMutationXoverFlags.hpp"
+#include "../Checkpoints/MetricLinePlot.hpp"
 #include <boost/timer/timer.hpp>
 #include <boost/filesystem.hpp>
 
@@ -57,19 +59,23 @@ int main(int argc, char* argv[])
     SavePopCheckpoint save_pop(1, working_dir);
     std::vector<double> ref_point = {1, 1};
     Hypervolume hvol(ref_point, working_dir, 1, Hypervolume::TERMINATION, 50);
+    MetricLinePlot hvol_plot(hvol);
     PlotFrontVTK plotfront;
+//    ResetMutXvrDebugFlags reset_flags;
 //    SerialiseCheckpoint<NSGAII<RNG> > save_state(1, optimiser, working_dir);
     optimiser.add_checkpoint(max_gen_terminate);
 //    optimiser.add_checkpoint(save_state);
     optimiser.add_checkpoint(save_pop);
-    optimiser.add_checkpoint(hvol);
+    optimiser.add_checkpoint(hvol_plot);
     optimiser.add_checkpoint(plotfront);
+//    optimiser.add_checkpoint(reset_flags);
 //    optimiser.visualise();
     
     // Initialise population
-    int pop_size = 128	;
+    int pop_size = 1000	;
     PopulationSPtr pop = intialisePopulationRandomDVAssignment(pop_size, test_problem.getProblemDefinitions(), rng);
-    
+    SetMutationInverseDVSize(pop->at(0), optimiser.getRealMutationOperator());
+
     // Run the optimisation
     optimiser(pop);
     

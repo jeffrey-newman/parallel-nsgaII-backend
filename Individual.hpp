@@ -18,6 +18,12 @@
 
 class Individual
 {
+public:
+//    bool mutated;
+//    bool crossovered;
+//    bool parent;
+//    bool child;
+
 private:
     
     ProblemDefinitions & definitions;
@@ -55,13 +61,13 @@ public:
 //    }
     
     Individual(const Individual & cpy)
-    : definitions(cpy.definitions), real_decision_variables(cpy.real_decision_variables), int_decision_variables(cpy.int_decision_variables), objectives(cpy.objectives), constraints(cpy.constraints), rank(cpy.rank), crowding_score(cpy.crowding_score)
+    : definitions(cpy.definitions), real_decision_variables(cpy.real_decision_variables), int_decision_variables(cpy.int_decision_variables), objectives(cpy.objectives), constraints(cpy.constraints), rank(cpy.rank), crowding_score(cpy.crowding_score)//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
     }
     
     Individual(ProblemDefinitions & defs)
-    : definitions(defs), real_decision_variables(defs.real_lowerbounds.size()), int_decision_variables(defs.int_lowerbounds.size()), objectives(defs.minimise_or_maximise.size()), constraints(defs.number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())
+    : definitions(defs), real_decision_variables(defs.real_lowerbounds.size()), int_decision_variables(defs.int_lowerbounds.size()), objectives(defs.minimise_or_maximise.size()), constraints(defs.number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
     }
@@ -287,6 +293,10 @@ std::ostream& operator<<(std::ostream& os, const Individual & ind)
     }
     os << ")\t";
     os << "Rank: " << ind.getRank() << "\tCrowdingDist: " << ind.getCrowdingScore();
+//    if (ind.mutated) os << "\tMutated";
+//    if (ind.crossovered) os << "\tCrossovered" << std::endl;
+//    if (ind.child) os << "\tFrom_Child";
+//    if (ind.parent) os << "\tFrom_Parent" << std::endl;
     return os;
 }
 
