@@ -20,6 +20,7 @@
 #include "../Metrics/Hypervolume.hpp"
 #include "../Checkpoints/ResetMutationXoverFlags.hpp"
 #include "../Checkpoints/MetricLinePlot.hpp"
+#include "../Checkpoints/MailCheckpoint.hpp"
 #include <boost/timer/timer.hpp>
 #include <boost/filesystem.hpp>
 
@@ -59,6 +60,10 @@ int main(int argc, char* argv[])
     SavePopCheckpoint save_pop(1, working_dir);
     std::vector<double> ref_point = {1, 1};
     Hypervolume hvol(ref_point, working_dir, 1, Hypervolume::TERMINATION, 50);
+    std::string mail_subj("Hypervolume of front from FON optimiser ");
+    MailCheckpoint mail(10, hvol, mail_subj);
+    std::string my_address("jeff@jeffandkat.id.au");
+    mail.addAddress(my_address);
     MetricLinePlot hvol_plot(hvol);
     PlotFrontVTK plotfront;
 //    ResetMutXvrDebugFlags reset_flags;
@@ -66,8 +71,10 @@ int main(int argc, char* argv[])
     optimiser.add_checkpoint(max_gen_terminate);
 //    optimiser.add_checkpoint(save_state);
     optimiser.add_checkpoint(save_pop);
+    optimiser.add_checkpoint(hvol);
     optimiser.add_checkpoint(hvol_plot);
     optimiser.add_checkpoint(plotfront);
+    optimiser.add_checkpoint(mail);
 //    optimiser.add_checkpoint(reset_flags);
 //    optimiser.visualise();
     

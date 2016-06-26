@@ -22,7 +22,7 @@
 #include "Population.hpp"
 
 #ifdef WITH_VTK
-#include "PlotFronts.hpp"
+#include "Checkpoints/PlotFronts.hpp"
 #endif
 
 #include <boost/serialization/nvp.hpp>

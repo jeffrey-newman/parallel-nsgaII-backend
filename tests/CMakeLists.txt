@@ -24,6 +24,8 @@ SET(CheckpointsSourcesT
         ../Checkpoints/PlotFronts.hpp
         ../Checkpoints/colours.hpp
         ../Checkpoints/ResetMutationXoverFlags.hpp
+        ../Checkpoints/MailCheckpoint.hpp
+        ../Checkpoints/MetricLinePlot.hpp
         )
 
 SET(SerializationSourcesT

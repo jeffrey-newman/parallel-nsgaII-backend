@@ -57,7 +57,7 @@ public:
     operator ()(PopulationSPtr pop)
     {
         ++num_gens;
-        bool return_val = metric(pop);
+//        bool return_val = metric(pop);
 
         vtkIdType row_num = table->InsertNextBlankRow();
         table->SetValue(row_num, 0, num_gens);
@@ -83,7 +83,7 @@ public:
         }
 //        view->GetInteractor()->Initialize();
 
-        return return_val;
+        return true;
     }
 };
 

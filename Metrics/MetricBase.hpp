@@ -5,7 +5,7 @@
 #include "../Checkpoint.hpp"
 
 
-class MetricBase : CheckpointBase
+class MetricBase : public CheckpointBase
 {
 public:
     virtual bool
