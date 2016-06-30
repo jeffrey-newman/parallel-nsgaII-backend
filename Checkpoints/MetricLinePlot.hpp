@@ -90,10 +90,13 @@ public:
 #else
 class MetricLinePlot : public CheckpointBase
 {
+private:
+    MetricBase & metric;
 
 public:
 
-    MetricLinePlot()
+    MetricLinePlot(MetricBase & _metric) :
+        metric(_metric)
     {
 
 

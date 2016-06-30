@@ -302,7 +302,7 @@ public:
     }
     
     bool
-    operator()(std::vector<std::vector<IndividualPtr> > fronts)
+    operator()(PopulationSPtr pop)
     {
         return true;
     }
