@@ -13,10 +13,14 @@
 #include "Evaluation.hpp"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
+#include <boost/date_time.hpp>
+#include <functional>
 
 
 class ParallelEvaluatorBase
 {
+public:
+    enum Log{OFF, LVL1, LVL2, LVL3};
 protected:
     boost::mpi::environment & mpi_env;
     boost::mpi::communicator & world;
@@ -28,18 +32,30 @@ protected:
     boost::mpi::content dv_c;
     boost::mpi::content oc_c;
     int max_tag;
+    Log do_log;
+    std::reference_wrapper<std::ostream> log_stream;
     
 public:
     ParallelEvaluatorBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs)
-    : mpi_env(_mpi_env), world(_world), problem_defs(_problem_defs), number_processes(world.size()), number_clients(number_processes - 1), max_tag(mpi_env.max_tag())
+        : mpi_env(_mpi_env), world(_world), problem_defs(_problem_defs), number_processes(world.size()), number_clients(number_processes - 1), max_tag(mpi_env.max_tag()), do_log(OFF), log_stream(std::cout)
     {
-        
+
+    }
+
+    void
+    log(Log _val = LVL1, std::ostream & _stream = std::cout)
+    {
+        do_log = _val;
+        if (do_log > OFF)
+        {
+            log_stream = _stream;
+        }
     }
 
 };
 
 
-class ParallelEvaluatePopServer : private ParallelEvaluatorBase, public EvaluatePopulationBase
+class ParallelEvaluatePopServer : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
     
 public:
@@ -83,7 +99,7 @@ public:
         //Sanity check - that we can represent each individual by an mpi tag.
         if (population->populationSize() > (max_tag - 1))
         {
-//            std::cout << "problem: max tag too small, population too large for mpi\n";
+            if (do_log > OFF) log_stream.get() << "problem: max tag too small, population too large for mpi\n";
         }
         
         int individual = 0;
@@ -93,7 +109,7 @@ public:
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
-//            std::cout << "sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << "sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
             world.send(client_id, individual, dv_c);
         }
 //        mpi::wait_all(reqs_out.begin(), reqs_out.end());
@@ -101,12 +117,13 @@ public:
         while (individual < population->populationSize())
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-//            std::cout << "received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
             
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
             world.send(s.source(), individual, dv_c);
 
             ++individual;
@@ -124,7 +141,7 @@ public:
 
 
 
-class ParallelEvaluatePopClient : private ParallelEvaluatorBase
+class ParallelEvaluatePopClient : public ParallelEvaluatorBase
 {
     ObjectivesAndConstraintsBase & eval;
     
@@ -148,9 +165,9 @@ public:
         bool do_continue = true;
         while (do_continue)
         {
-//            std::cout << "waiting to receive" << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "waiting to receive" << std::endl;
             boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-//            std::cout << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
             if (s.tag() == max_tag)
             {
                 do_continue = false;
