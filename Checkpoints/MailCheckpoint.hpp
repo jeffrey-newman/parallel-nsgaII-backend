@@ -41,7 +41,7 @@ public:
             BOOST_FOREACH(std::string & address, addresses)
             {
                 std::stringstream command;
-                command << command_start.str() << address << "< /dev/null";
+                command << command_start.str() << address << " < /dev/null";
                 system(command.str().c_str());
 
             }

@@ -111,7 +111,7 @@ public:
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << "sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
             world.send(client_id, individual, dv_c);
         }
 //        mpi::wait_all(reqs_out.begin(), reqs_out.end());
@@ -119,13 +119,13 @@ public:
         while (individual < population->populationSize())
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
             
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
             world.send(s.source(), individual, dv_c);
 
             ++individual;
@@ -167,7 +167,7 @@ public:
         bool do_continue = true;
         while (do_continue)
         {
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << "waiting to receive" << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " waiting to receive" << std::endl;
             boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
             if (s.tag() == max_tag)
