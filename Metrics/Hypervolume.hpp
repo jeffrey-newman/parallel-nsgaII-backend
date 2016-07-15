@@ -55,7 +55,7 @@ public:
         if (max_gens_no_improvement / gen_frequency < 3)
         {
             std::cout << "Warning: In Hypervolume checkpoint, termination "
-                         "results based on only three calculations of the hypervolume"
+                         "results based on less than three calculations of the hypervolume"
                       << std::endl;
         }
     }
@@ -130,7 +130,11 @@ public:
                 gens_no_improvement = 0;
             }
             if (volume < best_hypervolume) ++gens_no_improvement;
-            if (gens_no_improvement > max_gens_no_improvement) return false;
+            if (gens_no_improvement > max_gens_no_improvement)
+            {
+                std::cout << "Terminating. Hypervolume improvement stalled. No improvement in " << gens_no_improvement << " generations." << std::endl;
+                return false;
+            }
         }
 
         return true;

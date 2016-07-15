@@ -24,6 +24,7 @@ public:
         ++gen_number;
         if (gen_number > max_gen)
         {
+            std::cout << "Terminating. Exceeding maximum generation. Generation number: " << gen_number << std::endl;
             return false;
         }
         return true;

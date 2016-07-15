@@ -130,9 +130,10 @@ public:
             if (do_log > OFF)  log_stream.get() << "\n\n\nAfter crossover: \n" << children;
 
             mutation(children);
-            pop_eval(children);
 
             if (do_log > OFF)  log_stream.get() << "\n\n\nAfter mutation: \n" << children;
+
+            pop_eval(children);
 
             children = merge_calc_front_and_dist(parents, children);
 
