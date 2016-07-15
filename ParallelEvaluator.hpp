@@ -96,6 +96,8 @@ public:
     void
     operator()(PopulationSPtr population)
     {
+        if (do_log > OFF) log_stream.get() << "Evaluating population with size: " << population->size() << "\n";
+
         //Sanity check - that we can represent each individual by an mpi tag.
         if (population->populationSize() > (max_tag - 1))
         {
