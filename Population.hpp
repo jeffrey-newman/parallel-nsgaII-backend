@@ -192,7 +192,7 @@ PopulationSPtr
 intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitions & defs, RNG & rng)
 {
     PopulationSPtr pop(new Population(population_size, defs));
-    
+
     
     for (int i = 0; i < defs.real_lowerbounds.size(); ++i)
     {
