@@ -70,7 +70,11 @@ public:
          *              NON-DOMINATED-SORTING                                  *
          **********************************************************************/
         
-        
+        if (population_ref.size() == 0)
+        {
+            FrontsSPtr fronts(new std::vector<Front>(0));
+            return fronts;
+        }
     
         
         std::vector<DominationInfo> population_set(population_ref.size());

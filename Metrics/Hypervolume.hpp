@@ -1,6 +1,7 @@
 #ifndef HYPERVOLUME_HPP
 #define HYPERVOLUME_HPP
 
+#include <fstream>
 #include "../Checkpoint.hpp"
 #include "../Population.hpp"
 #include "../Individual.hpp"
@@ -10,6 +11,7 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/map.hpp>
 #include "../Serialization/SerializeBoostPath.hpp"
+#include <boost/archive/xml_oarchive.hpp>
 
 
 
@@ -76,42 +78,49 @@ public:
         // initialize volume
         ++generation;
 
-
-        if (generation % gen_frequency == 0)
+        if (population->getFronts()->size() ==0)
         {
-            Front first_front = population->getFronts()->at(0);
-            dataNumber = first_front.size();
-            assert(population->at(0)->numberOfObjectives() == dimension);
-            double* data = new double[dataNumber * dimension];
-            int j = 0;
-            BOOST_FOREACH(IndividualSPtr ind, first_front)
+            volume = 0;
+        }
+        else
+        {
+
+            if (generation % gen_frequency == 0)
             {
-                for (int i = 0; i < ind->numberOfObjectives(); ++i)
+                Front first_front = population->getFronts()->at(0);
+                dataNumber = first_front.size();
+                assert(population->at(0)->numberOfObjectives() == dimension);
+                double* data = new double[dataNumber * dimension];
+                int j = 0;
+                BOOST_FOREACH(IndividualSPtr ind, first_front)
                 {
-                    if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
+                    for (int i = 0; i < ind->numberOfObjectives(); ++i)
                     {
-                        data[j++] = ind->getObjective(i) - ref_point[i];
-                    }
-                    else
-                    {
-                        data[j++] = ref_point[i] - ind->getObjective(i);
-                    }
+                        if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
+                        {
+                            data[j++] = ind->getObjective(i) - ref_point[i];
+                        }
+                        else
+                        {
+                            data[j++] = ref_point[i] - ind->getObjective(i);
+                        }
 
+                    }
                 }
+
+                //            std::cout << "Hypervolume transformation: \n";
+                //            for (int j = 0; j < (dataNumber * dimension); j = j + dimension)
+                //            {
+                //                for (int k = 0; k < dimension; ++k)
+                //                {
+                //                    std::cout << data[j+k] << " ";
+                //                }
+                //                std::cout << "\n";
+                //            }
+                //            std::cout << std::flush;
+
+                volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
             }
-
-//            std::cout << "Hypervolume transformation: \n";
-//            for (int j = 0; j < (dataNumber * dimension); j = j + dimension)
-//            {
-//                for (int k = 0; k < dimension; ++k)
-//                {
-//                    std::cout << data[j+k] << " ";
-//                }
-//                std::cout << "\n";
-//            }
-//            std::cout << std::flush;
-
-            volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
             hypervolume_log.insert(std::make_pair(generation, volume));
 
             boost::filesystem::path save_file = log_path / ("hypervolume.xml");

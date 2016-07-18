@@ -19,7 +19,7 @@ class ObjectivesAndConstraintsBase
 {
 public:
     virtual
-    std::pair<std::vector<double>, std::vector<double> > &
+    std::pair<std::vector<double>, std::vector<double> >
     operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars) = 0;
 };
 
@@ -29,7 +29,7 @@ private:
     std::pair<std::vector<double>, std::vector<double> > dummy_return;
     
 public:
-    std::pair<std::vector<double>, std::vector<double> > &
+    std::pair<std::vector<double>, std::vector<double> >
     operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars)
     {
         return (dummy_return);
