@@ -16,8 +16,12 @@
 
 
 
+
 class Hypervolume : public MetricBase
 {
+public:
+    enum Log{OFF, LVL1, LVL2, LVL3};
+
 public:
 
     enum DoTerminate {TERMINATION, NO_TERMINATION};
@@ -35,6 +39,8 @@ private:
     int gens_no_improvement;
     int max_gens_no_improvement;
     double best_hypervolume;
+    Log do_log;
+    std::reference_wrapper<std::ostream> log_stream;
 
 
 public:
@@ -47,7 +53,7 @@ public:
           ref_point_array(new double[dimension]), volume(0), dataNumber(0), generation(0),
           gen_frequency(_gen_frequency), do_terminate(_do_terminate), gens_no_improvement(0),
           max_gens_no_improvement(_max_gen_no_improvement),
-          best_hypervolume(std::numeric_limits<double>::min())
+          best_hypervolume(std::numeric_limits<double>::min()), do_log(OFF), log_stream(std::cout)
     {
         for (int var = 0; var < ref_point.size(); ++var)
         {
@@ -80,6 +86,7 @@ public:
 
         if (population->getFronts()->size() ==0)
         {
+            if (do_log > OFF) log_stream.get() << "Hypervolume: Front has no solutions\n";
             volume = 0;
         }
         else
@@ -94,8 +101,10 @@ public:
                 int j = 0;
                 BOOST_FOREACH(IndividualSPtr ind, first_front)
                 {
+                    if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << j << ": ";
                     for (int i = 0; i < ind->numberOfObjectives(); ++i)
                     {
+                        if (do_log > OFF) log_stream.get() << ind->getObjective(i) << "->";
                         if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
                         {
                             data[j++] = ind->getObjective(i) - ref_point[i];
@@ -104,6 +113,7 @@ public:
                         {
                             data[j++] = ref_point[i] - ind->getObjective(i);
                         }
+                        if (do_log > OFF) log_stream.get() << data[j++]  << ", ";
 
                     }
                 }
@@ -153,6 +163,16 @@ public:
     getVal()
     {
         return volume;
+    }
+
+    void
+    log(Log _val = LVL1, std::ostream & _stream = std::cout)
+    {
+        do_log = _val;
+        if (do_log > OFF)
+        {
+            log_stream = _stream;
+        }
     }
 
     friend class boost::serialization::access;
