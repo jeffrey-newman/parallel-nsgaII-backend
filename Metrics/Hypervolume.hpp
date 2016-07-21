@@ -107,13 +107,14 @@ public:
                         if (do_log > OFF) log_stream.get() << ind->getObjective(i) << "->";
                         if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
                         {
-                            data[j++] = ind->getObjective(i) - ref_point[i];
+                            data[j] = ind->getObjective(i) - ref_point[i];
                         }
                         else
                         {
-                            data[j++] = ref_point[i] - ind->getObjective(i);
+                            data[j] = ref_point[i] - ind->getObjective(i);
                         }
-                        if (do_log > OFF) log_stream.get() << data[j++]  << ", ";
+                        if (do_log > OFF) log_stream.get() << data[j] << "(ref: " << ref_point[i] <<  ")" << ", ";
+                        ++j;
 
                     }
                 }
@@ -131,6 +132,7 @@ public:
 
                 volume = fpli_hv(data, dimension, dataNumber, ref_point_array);
             }
+            if (do_log > OFF) log_stream.get() << "Hypervolume: " << volume << "\n";
             hypervolume_log.insert(std::make_pair(generation, volume));
 
             boost::filesystem::path save_file = log_path / ("hypervolume.xml");
