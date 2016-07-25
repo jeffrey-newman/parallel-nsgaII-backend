@@ -1,5 +1,6 @@
-#ifndef SAVEPOPCHECKPOINT_HPP
-#define SAVEPOPCHECKPOINT_HPP
+#ifndef SAVEFIRSTFRONTCHECKPOINT_HPP
+#define SAVEFIRSTFRONTCHECKPOINT_HPP
+
 
 #include "../Checkpoint.hpp"
 #include <boost/archive/xml_iarchive.hpp>
@@ -11,7 +12,7 @@
 #include <fstream>
 
 
-class SavePopCheckpoint : public CheckpointBase
+class SaveFirstFrontCheckpoint : public CheckpointBase
 {
 
     int gen_frequency;
@@ -19,9 +20,8 @@ class SavePopCheckpoint : public CheckpointBase
     boost::filesystem::path save_path;
     bool txt_rep;
 
-
 public:
-    SavePopCheckpoint(int _gen_frequency, boost::filesystem::path _save_path, bool _txt_rep = true)
+    SaveFirstFrontCheckpoint(int _gen_frequency, boost::filesystem::path _save_path, bool _txt_rep = true)
     : gen_frequency(_gen_frequency), gen_number(0), save_path(_save_path), txt_rep(_txt_rep)
     {
 
@@ -33,11 +33,19 @@ public:
         ++gen_number;
         if (gen_number % gen_frequency == 0)
         {
-            boost::filesystem::path save_file = save_path / ("pop_gen" + std::to_string(gen_number) + ".xml");
+            boost::filesystem::path save_file = save_path / ("first_front_gen" + std::to_string(gen_number) + ".xml");
             std::ofstream ofs(save_file.c_str());
             assert(ofs.good());
             boost::archive::xml_oarchive oa(ofs);
-            oa << BOOST_SERIALIZATION_NVP(population);
+            oa << BOOST_SERIALIZATION_NVP(population->getFronts()->at(0));
+
+            if (txt_rep)
+            {
+                boost::filesystem::path save_file2 = save_path / ("first_front_gen" + std::to_string(gen_number) +  ".txt");
+                std::ofstream ofs2(save_file2.c_str());
+                assert(ofs2.good());
+                ofs2 << population->getFronts()->at(0);
+            }
         }
         return true;
     }
@@ -52,4 +60,7 @@ public:
     }
 };
 
-#endif // SAVEPOPCHECKPOINT_HPP
+
+
+
+#endif // SAVEFIRSTFRONTCHECKPOINT_HPP

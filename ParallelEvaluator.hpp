@@ -178,6 +178,7 @@ public:
             {
                 //calc objective
                 objs_and_constraints = eval(decision_vars.first, decision_vars.second);
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << std::endl;
                 world.send(0, s.tag(), oc_c);
             }
         }
