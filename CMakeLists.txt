@@ -21,7 +21,7 @@ IF (USE_STATIC_BOOST)
     SET(Boost_USE_STATIC_RUNTIME ON)
 ENDIF()
 
-FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono)
+FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono serialization)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
 add_definitions(-DVARIANT=4)

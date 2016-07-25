@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     std::vector<int> lower_bounds_i;
     std::vector<int> upper_bounds_i;
     std::vector<MinOrMaxType> min_or_max(1, MINIMISATION);
-    ProblemDefinitions defs(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0);
+    ProblemDefinitionsSPtr defs(new ProblemDefinitions(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0));
     //    std::vector<DecisionVariable_t> parent1_dv_values {2};
     //    std::vector<DecisionVariable_t> parent2_dv_values {5};
     Individual ind1(defs);

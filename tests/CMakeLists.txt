@@ -59,9 +59,9 @@ ADD_EXECUTABLE(DebsSBXTester ${DebsSBXTesterSources} ${AllSourcesT})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
-        target_link_libraries(DebsSBXTester ${VTK_LIBRARIES} ${MPI_LIBRARIES})
+        target_link_libraries(DebsSBXTester ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
     else()
-        target_link_libraries(DebsSBXTester vtkHybrid vtkWidgets)
+        target_link_libraries(DebsSBXTester vtkHybrid vtkWidgets ${Boost_LIBRARIES})
     endif()
 ENDIF()
 
@@ -80,9 +80,9 @@ ADD_EXECUTABLE(DevsPolynomialMutationTester ${DebsPolynomialMutationTesterSource
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
-	  target_link_libraries(DevsPolynomialMutationTester ${VTK_LIBRARIES} ${MPI_LIBRARIES})
+          target_link_libraries(DevsPolynomialMutationTester ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 	else()
-	  target_link_libraries(DevsPolynomialMutationTester vtkHybrid vtkWidgets)
+          target_link_libraries(DevsPolynomialMutationTester vtkHybrid vtkWidgets ${Boost_LIBRARIES})
 	endif()
 ENDIF()
 	
@@ -100,9 +100,9 @@ target_link_libraries(FonTEstProblem ${Boost_LIBRARIES})
 
 IF(USE_VTK)
     if(VTK_LIBRARIES)
-        target_link_libraries(FonTEstProblem ${VTK_LIBRARIES} ${MPI_LIBRARIES})
+        target_link_libraries(FonTEstProblem ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
     else()
-        target_link_libraries(FonTEstProblem vtkHybrid vtkWidgets)
+        target_link_libraries(FonTEstProblem vtkHybrid vtkWidgets ${Boost_LIBRARIES})
     endif()
 ENDIF()
 
@@ -118,6 +118,16 @@ ADD_EXECUTABLE(TestFON ${FonTestSources}  ${AllSourcesT})
 
 set_property(TARGET TestFON PROPERTY CXX_STANDARD 11)
 
+IF(USE_VTK)
+    if(VTK_LIBRARIES)
+        target_link_libraries(TestFON ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+    else()
+        target_link_libraries(TestFON vtkHybrid vtkWidgets ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+    endif()
+ELSE()
+    target_link_libraries(TestFON ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+ENDIF()
+
 
 SET(DebsCrowdingCalcTestSources
     TestDebsCrowdingDistance.cpp
@@ -127,9 +137,9 @@ SET(DebsCrowdingCalcTestSources
 
 IF(USE_VTK)
 	if(VTK_LIBRARIES)
-		target_link_libraries(TestDebsCrowding ${VTK_LIBRARIES} ${MPI_LIBRARIES})
+                target_link_libraries(TestDebsCrowding ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 	else()
-		target_link_libraries(TestDebsCrowding vtkHybrid vtkWidgets)
+                target_link_libraries(TestDebsCrowding vtkHybrid vtkWidgets ${Boost_LIBRARIES})
 	endif()
 ENDIF()
 

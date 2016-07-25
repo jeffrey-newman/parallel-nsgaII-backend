@@ -13,7 +13,7 @@
 
 int main(int argc, char * argv[])
 {
-    ProblemDefinitions dummy_defs(2,2,0,0);
+    ProblemDefinitionsSPtr dummy_defs(new ProblemDefinitions(2,2,0,0));
     PopulationSPtr myPop(new Population);
     
     IndividualSPtr ind1(new Individual(dummy_defs));

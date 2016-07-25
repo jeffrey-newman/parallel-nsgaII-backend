@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
     
 //    std::vector<DecisionVariable_t> parent1_dv_values {2};
 //    std::vector<DecisionVariable_t> parent2_dv_values {5};
-    ProblemDefinitions defs(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0);
+    ProblemDefinitionsSPtr defs(new ProblemDefinitions(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0));
     Individual parent1(defs);
     Individual parent2(defs);
     parent1.setRealDV(0,2);

@@ -27,8 +27,8 @@ private:
     int num_constraints;
     double min_dv_value;
     double max_dv_value;
-    
-    ProblemDefinitions prob_defs;
+
+    ProblemDefinitionsSPtr prob_defs;
     std::pair<std::vector<double>, std::vector<double> > objectives_and_constrataints;
     
 //    std::vector<double> constraints;
@@ -43,7 +43,7 @@ public:
         num_constraints(0),
         min_dv_value(-4),
         max_dv_value(4),
-        prob_defs(num_real_decision_vars, min_dv_value, max_dv_value,  num_int_decision_vars, 0, 0, num_objectives, MINIMISATION, num_constraints),
+        prob_defs(new ProblemDefinitions(num_real_decision_vars, min_dv_value, max_dv_value,  num_int_decision_vars, 0, 0, num_objectives, MINIMISATION, num_constraints)),
     objectives_and_constrataints(std::piecewise_construct, std::make_tuple(num_objectives, std::numeric_limits<double>::max()), std::make_tuple(num_constraints))
     {
         
@@ -70,10 +70,34 @@ public:
         return (objectives_and_constrataints);
     }
     
-    ProblemDefinitions & getProblemDefinitions()
+    ProblemDefinitionsSPtr & getProblemDefinitions()
     {
         return (prob_defs);
     }
+};
+
+
+class MinMaxFON : public FON
+{
+
+
+public:
+    MinMaxFON()
+        : FON()
+    {
+        ProblemDefinitionsSPtr defs = FON::getProblemDefinitions();
+        defs->minimise_or_maximise.at(1) = MAXIMISATION;
+    }
+
+    virtual
+    std::pair<std::vector<double>, std::vector<double> > &
+    operator()(const std::vector<double>  & real_decision_vars, const std::vector<int> & int_decision_vars)
+    {
+        std::pair<std::vector<double>, std::vector<double> > & val = (FON::operator()(real_decision_vars, int_decision_vars));
+        val.first.at(1) = -1 * val.first.at(1);
+        return (val);
+    }
+
 };
 
 class DelayFON : public FON
@@ -109,7 +133,7 @@ private:
     double min_dv_value;
     double max_dv_value;
     
-    ProblemDefinitions prob_defs;
+    ProblemDefinitionsSPtr prob_defs;
     std::pair<std::vector<double>, std::vector<double> > objectives_and_constrataints;
     
     //    std::vector<double> constraints;
@@ -124,7 +148,7 @@ public:
     num_constraints(0),
     min_dv_value(1),
     max_dv_value(5),
-    prob_defs(num_real_decision_vars, min_dv_value, max_dv_value,  num_int_decision_vars, 0, 0, num_objectives, MINIMISATION, num_constraints),
+    prob_defs(new ProblemDefinitions(num_real_decision_vars, min_dv_value, max_dv_value,  num_int_decision_vars, 0, 0, num_objectives, MINIMISATION, num_constraints)),
     objectives_and_constrataints(std::piecewise_construct, std::make_tuple(num_objectives, std::numeric_limits<double>::max()), std::make_tuple(num_constraints))
     {
         
@@ -150,7 +174,7 @@ public:
         return (objectives_and_constrataints);
     }
     
-    ProblemDefinitions & getProblemDefinitions()
+    ProblemDefinitionsSPtr & getProblemDefinitions()
     {
         return (prob_defs);
     }

@@ -86,9 +86,12 @@ public:
     ~ParallelEvaluatePopServer()
     {
         // Send signal to slaves to indicate shutdown.
+//        std::cout << "In destructor" << std::endl;
         for (int i = 0; i < number_clients; ++i)
         {
             int client_id = i + 1;
+//            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
             world.send(client_id, max_tag, dv_c);
         }
     }
@@ -111,7 +114,7 @@ public:
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << "\n";
             world.send(client_id, individual, dv_c);
         }
 //        mpi::wait_all(reqs_out.begin(), reqs_out.end());
@@ -119,13 +122,13 @@ public:
         while (individual < population->populationSize())
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << individual << " with " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << "\n";
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
             
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << "\n";
             world.send(s.source(), individual, dv_c);
 
             ++individual;
@@ -134,8 +137,12 @@ public:
         for (int i = 0; i < number_clients; ++i)
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << "\n";
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+
+
+//            world.send(s.source(), max_tag, dv_c);
         }
     
     }
@@ -169,16 +176,17 @@ public:
         {
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " waiting to receive" << std::endl;
             boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << "\n";
             if (s.tag() == max_tag)
             {
                 do_continue = false;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " Terminating\n";
             }
             else
             {
                 //calc objective
                 objs_and_constraints = eval(decision_vars.first, decision_vars.second);
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << "\n";
                 world.send(0, s.tag(), oc_c);
             }
         }

@@ -2,6 +2,7 @@
 #define HYPERVOLUME_HPP
 
 #include <fstream>
+#include <cmath>
 #include "../Checkpoint.hpp"
 #include "../Population.hpp"
 #include "../Individual.hpp"
@@ -21,6 +22,7 @@ class Hypervolume : public MetricBase
 {
 public:
     enum Log{OFF, LVL1, LVL2, LVL3};
+    enum Better{MAXIMISE, MINIMISE};
 
 public:
 
@@ -29,6 +31,7 @@ private:
 
     std::vector<double> ref_point;
     std::vector<double> unitize_point;
+    std::vector<double> axis_lengths;
     int dimension;
     double* ref_point_array;
     double volume;
@@ -44,7 +47,7 @@ private:
     Log do_log;
     std::reference_wrapper<std::ostream> log_stream;
     bool unitize;
-    bool is_minimise_hvol;
+    Better is_maximize_hvol;
 
 
 public:
@@ -53,12 +56,25 @@ public:
                 int _gen_frequency = 1,
                 DoTerminate _do_terminate = NO_TERMINATION,
                 int _max_gen_no_improvement = 100,
-                std::vector<double> & _unitize_point = dummy_point, bool _is_minimise_hvol = true)
-        : ref_point(_ref_point), dimension(_ref_point.size()),
-          ref_point_array(new double[dimension]), volume(0), dataNumber(0), generation(0),
-          gen_frequency(_gen_frequency), do_terminate(_do_terminate), gens_no_improvement(0),
+                Better _is_maximise_hvol = MAXIMISE,
+                std::vector<double> & _unitize_point = dummy_point)
+        : ref_point(_ref_point),
+          unitize_point(_unitize_point),
+          axis_lengths(_ref_point.size(), 0.0),
+          dimension(_ref_point.size()),
+          ref_point_array(new double[dimension]),
+          volume(0),
+          dataNumber(0),
+          generation(0),
+          gen_frequency(_gen_frequency),
+          do_terminate(_do_terminate),
+          gens_no_improvement(0),
           max_gens_no_improvement(_max_gen_no_improvement),
-          best_hypervolume(std::numeric_limits<double>::min()), do_log(OFF), log_stream(std::cout), unitize_point(_unitize_point), is_minimise_hvol(_is_minimise_hvol)
+          best_hypervolume(std::numeric_limits<double>::min()),
+          do_log(OFF),
+          log_stream(std::cout),
+          unitize(true),
+          is_maximize_hvol(_is_maximise_hvol)
     {
         for (int var = 0; var < ref_point.size(); ++var)
         {
@@ -75,6 +91,13 @@ public:
         if (unitize_point == dummy_point)
         {
             unitize = false;
+        }
+        else
+        {
+            for (int i = 0; i < ref_point.size(); ++i)
+            {
+                axis_lengths[i] = std::abs(unitize_point[i] - ref_point[i]);
+            }
         }
     }
 
@@ -94,84 +117,56 @@ public:
         // initialize volume
         ++generation;
 
-        if (population->getFronts()->size() ==0)
-        {
-            if (do_log > OFF) log_stream.get() << "Hypervolume: Front has no solutions\n";
-            volume = 0;
-        }
-        else
-        {
 
-            if (generation % gen_frequency == 0)
+        // Fonseca's Hypervolume code assumes we are maximising the hypervolume, for minimisation objectives.
+
+        if (generation % gen_frequency == 0)
+        {
+            if (population->getFronts()->size() ==0)
             {
+                if (do_log > OFF) log_stream.get() << "Hypervolume: Front has no solutions\n";
+                volume = 0;
+            }
+            else
+            {
+
 
                 Front first_front = population->getFronts()->at(0);
                 dataNumber = first_front.size();
                 assert(population->at(0)->numberOfObjectives() == dimension);
                 double* data = new double[dataNumber * dimension];
                 int j = 0;
-                if (is_minimise_hvol)
+
+                BOOST_FOREACH(IndividualSPtr ind, first_front)
                 {
-                    BOOST_FOREACH(IndividualSPtr ind, first_front)
+
+                    if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << (j/2) << ": ";
+                    for (int i = 0; i < ind->numberOfObjectives(); ++i)
                     {
-
-                        if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << j << ": ";
-                        for (int i = 0; i < ind->numberOfObjectives(); ++i)
+                        if (do_log > OFF) log_stream.get() << ind->getObjective(i) << " -> ";
+                        if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
                         {
-                            if (do_log > OFF) log_stream.get() << ind->getObjective(i) << "->";
-                            if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
+                            data[j] = ind->getObjective(i) - ref_point[i];
+                            if (unitize)
                             {
-                                data[j] = ind->getObjective(i) - ref_point[i];
-                                if (unitize)
-                                {
-                                    data[j] = data[j] / (unitize_point[i] - ref_point[i]);
-                                }
+                                data[j] = data[j] / axis_lengths[i];
                             }
-                            else
-                            {
-                                data[j] = ref_point[i] - ind->getObjective(i);
-                                if (unitize)
-                                {
-                                    data[j] = data[j] / (ref_point[i] - unitize_point[i] );
-                                }
-                            }
-                            if (do_log > OFF) log_stream.get() << data[j] << "(ref: " << ref_point[i] <<  ")" << ", ";
-                            ++j;
-
                         }
-                    }
-                }
-                else
-                {
-                    BOOST_FOREACH(IndividualSPtr ind, first_front)
-                    {
-
-                        if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << j << ": ";
-                        for (int i = 0; i < ind->numberOfObjectives(); ++i)
+                        else
                         {
-                            if (do_log > OFF) log_stream.get() << ind->getObjective(i) << "->";
-                            if (ind->isMinimiseOrMaximise(i) == MAXIMISATION)
+                            data[j] = ref_point[i] - ind->getObjective(i);
+                            if (unitize)
                             {
-                                data[j] = ind->getObjective(i) - ref_point[i];
-                                if (unitize)
-                                {
-                                    data[j] = data[j] / (unitize_point[i] - ref_point[i]);
-                                }
+                                data[j] = data[j] / axis_lengths[i];
                             }
-                            else
-                            {
-                                data[j] = ref_point[i] - ind->getObjective(i);
-                                if (unitize)
-                                {
-                                    data[j] = data[j] / (ref_point[i] - unitize_point[i] );
-                                }
-                            }
-                            if (do_log > OFF) log_stream.get() << data[j] << "(ref: " << ref_point[i] <<  ")" << ", ";
-                            ++j;
-
                         }
+                        if (do_log > OFF) log_stream.get() << data[j] << " (ref: " << ref_point[i] <<  " )" << ", ";
+                        ++j;
                     }
+                    if (do_log > OFF) log_stream.get() <<  "\n";
                 }
+
+                if (do_log > OFF) log_stream.get() <<  std::endl;
 
                 //            std::cout << "Hypervolume transformation: \n";
                 //            for (int j = 0; j < (dataNumber * dimension); j = j + dimension)
@@ -195,20 +190,38 @@ public:
             boost::archive::xml_oarchive oa(ofs);
             oa << boost::serialization::make_nvp("hypervolume", *this);
             ofs.close();
-        }
 
-        if (do_terminate == TERMINATION)
-        {
-            if (volume > best_hypervolume)
+            if (do_terminate == TERMINATION)
             {
-                best_hypervolume = volume;
-                gens_no_improvement = 0;
-            }
-            if (volume < best_hypervolume) ++gens_no_improvement;
-            if (gens_no_improvement > max_gens_no_improvement)
-            {
-                std::cout << "Terminating. Hypervolume improvement stalled. No improvement in " << gens_no_improvement << " generations." << std::endl;
-                return false;
+                if (is_maximize_hvol == MAXIMISE)
+                {
+                    if (volume > best_hypervolume)
+                    {
+                        best_hypervolume = volume;
+                        gens_no_improvement = 0;
+                    }
+                    if (volume < best_hypervolume) ++gens_no_improvement;
+                    if (gens_no_improvement > max_gens_no_improvement)
+                    {
+                        std::cout << "Terminating. Hypervolume improvement stalled. No improvement in " << gens_no_improvement << " generations." << std::endl;
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (volume < best_hypervolume)
+                    {
+                        best_hypervolume = volume;
+                        gens_no_improvement = 0;
+                    }
+                    if (volume > best_hypervolume) ++gens_no_improvement;
+                    if (gens_no_improvement > max_gens_no_improvement)
+                    {
+                        std::cout << "Terminating. Hypervolume improvement stalled. No improvement in " << gens_no_improvement << " generations." << std::endl;
+                        return false;
+                    }
+                }
+
             }
         }
 

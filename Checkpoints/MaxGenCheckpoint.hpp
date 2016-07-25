@@ -22,6 +22,7 @@ public:
     operator()(PopulationSPtr population)
     {
         ++gen_number;
+//        std::cout << gen_number << ": " << max_gen << std::endl;
         if (gen_number >= max_gen)
         {
             std::cout << "Terminating. Exceeding maximum generation. Generation number: " << (gen_number) << std::endl;

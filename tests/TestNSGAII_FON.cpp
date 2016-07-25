@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     // The optimisation problem
 //    FON test_problem;
     int delay = 0;
-    DelayFON test_problem(delay);
+    MinMaxFON test_problem;
     
     std::stringstream timer_info;
     boost::scoped_ptr<boost::timer::auto_cpu_timer> t((boost::timer::auto_cpu_timer *) nullptr);
@@ -54,27 +54,28 @@ int main(int argc, char* argv[])
     RNG rng(seed);
     
     // The optimiser
-    int max_gen = 1000;
+    int max_gen = 10;
     NSGAII<RNG> optimiser(rng, test_problem);
     MaxGenCheckpoint max_gen_terminate(max_gen);
-    SavePopCheckpoint save_pop(1, working_dir);
-    std::vector<double> ref_point = {1, 1};
+//    SavePopCheckpoint save_pop(1, working_dir);
+    std::vector<double> ref_point = {1, -1};
     Hypervolume hvol(ref_point, working_dir, 1, Hypervolume::TERMINATION, 50);
+//    hvol.log();
     std::string mail_subj("Hypervolume of front from FON optimiser ");
-    MailCheckpoint mail(10, hvol, mail_subj);
-    std::string my_address("jeff@jeffandkat.id.au");
-    mail.addAddress(my_address);
+//    MailCheckpoint mail(10, hvol, mail_subj);
+//    std::string my_address("jeff@jeffandkat.id.au");
+//    mail.addAddress(my_address);
     MetricLinePlot hvol_plot(hvol);
     PlotFrontVTK plotfront;
 //    ResetMutXvrDebugFlags reset_flags;
 //    SerialiseCheckpoint<NSGAII<RNG> > save_state(1, optimiser, working_dir);
     optimiser.add_checkpoint(max_gen_terminate);
 //    optimiser.add_checkpoint(save_state);
-    optimiser.add_checkpoint(save_pop);
+//    optimiser.add_checkpoint(save_pop);
     optimiser.add_checkpoint(hvol);
     optimiser.add_checkpoint(hvol_plot);
     optimiser.add_checkpoint(plotfront);
-    optimiser.add_checkpoint(mail);
+//    optimiser.add_checkpoint(mail);
 //    optimiser.add_checkpoint(reset_flags);
 //    optimiser.visualise();
     
