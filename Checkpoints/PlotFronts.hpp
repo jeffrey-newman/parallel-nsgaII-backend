@@ -10,7 +10,8 @@
 #define PlotFronts_h
 
 
-
+#include "../Population.hpp"
+#include "../Checkpoint.hpp"
 
 #ifdef WITH_VTK
 #include <sstream>
@@ -32,8 +33,7 @@
 
 #include "colours.hpp"
 
-#include "../Population.hpp"
-#include "../Checkpoint.hpp"
+
 
 
 
