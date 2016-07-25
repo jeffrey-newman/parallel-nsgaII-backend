@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 PROJECT(NSGA-Parallel-Backend)
-
+set (CMAKE_CXX_STANDARD 11)
 SET(USE_VTK CACHE BOOL "Set to on to use vtk visualisation")
 IF (USE_VTK)
 	find_package(VTK REQUIRED)
