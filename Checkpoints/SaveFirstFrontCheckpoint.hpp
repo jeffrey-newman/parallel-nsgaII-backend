@@ -37,7 +37,9 @@ public:
             std::ofstream ofs(save_file.c_str());
             assert(ofs.good());
             boost::archive::xml_oarchive oa(ofs);
-            oa << BOOST_SERIALIZATION_NVP(population->getFronts()->at(0));
+
+            Population & first_front = population->getFronts()->at(0);
+            oa << BOOST_SERIALIZATION_NVP(first_front);
 
             if (txt_rep)
             {

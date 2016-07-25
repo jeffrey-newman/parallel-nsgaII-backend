@@ -26,6 +26,7 @@ SET(CheckpointsSourcesT
         ../Checkpoints/ResetMutationXoverFlags.hpp
         ../Checkpoints/MailCheckpoint.hpp
         ../Checkpoints/MetricLinePlot.hpp
+        ../Checkpoints/SaveFirstFrontCheckpoint.hpp
         )
 
 SET(SerializationSourcesT
@@ -191,17 +192,17 @@ ELSE()
 ENDIF()
 
 
-if(MPI_COMPILE_FLAGS)
-  set_target_properties(TestParallelFON PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-endif()
+#if(MPI_COMPILE_FLAGS)
+#  set_target_properties(TestParallelFON PROPERTIES
+#    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+#endif()
 
-if(MPI_LINK_FLAGS)
-  set_target_properties(TestParallelFON PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
-endif()
+#if(MPI_LINK_FLAGS)
+#  set_target_properties(TestParallelFON PROPERTIES
+#    LINK_FLAGS "${MPI_LINK_FLAGS}")
+#endif()
 
-set_property(TARGET TestParallelFON PROPERTY CXX_STANDARD 11)
+#set_property(TARGET TestParallelFON PROPERTY CXX_STANDARD 11)
 
 
 SET(TestParallelSpeedup
@@ -220,17 +221,17 @@ ELSE()
 ENDIF()
 
 
-if(MPI_COMPILE_FLAGS)
-  set_target_properties(TestParallelSpeedup PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-endif()
+#if(MPI_COMPILE_FLAGS)
+#  set_target_properties(TestParallelSpeedup PROPERTIES
+#    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+#endif()
 
-if(MPI_LINK_FLAGS)
-  set_target_properties(TestParallelSpeedup PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
-endif()
+#if(MPI_LINK_FLAGS)
+#  set_target_properties(TestParallelSpeedup PROPERTIES
+#    LINK_FLAGS "${MPI_LINK_FLAGS}")
+#endif()
 
-set_property(TARGET TestParallelSpeedup PROPERTY CXX_STANDARD 11)
+#set_property(TARGET TestParallelSpeedup PROPERTY CXX_STANDARD 11)
 
 
 SET(TestIndiSerialisatn
