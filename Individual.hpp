@@ -26,7 +26,7 @@ public:
 
 private:
     
-    ProblemDefinitions & definitions;
+    ProblemDefinitionsSPtr definitions;
     std::vector<double> real_decision_variables;
     std::vector<int> int_decision_variables;
     std::vector<double> objectives;
@@ -66,10 +66,21 @@ public:
         
     }
     
-    Individual(ProblemDefinitions & defs)
-    : definitions(defs), real_decision_variables(defs.real_lowerbounds.size()), int_decision_variables(defs.int_lowerbounds.size()), objectives(defs.minimise_or_maximise.size()), constraints(defs.number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
+    Individual(ProblemDefinitionsSPtr defs)
+    : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
+    }
+
+    Individual()
+    {
+
+    }
+
+    void
+    setProblemDefinitions(ProblemDefinitionsSPtr defs)
+    {
+        definitions.swap(defs);
     }
     
     Individual &
@@ -124,7 +135,7 @@ public:
     const MinOrMaxType &
     isMinimiseOrMaximise(const int index) const
     {
-        return (definitions.minimise_or_maximise[index]);
+        return (definitions->minimise_or_maximise[index]);
         
     }
     
@@ -206,22 +217,22 @@ public:
     
     const double & getRealUpperBound(const int index) const
     {
-        return (definitions.real_upperbounds[index]);
+        return (definitions->real_upperbounds[index]);
     }
     
     const double & getRealLowerBound(const int index) const
     {
-        return (definitions.real_lowerbounds[index]);
+        return (definitions->real_lowerbounds[index]);
     }
     
     const int getIntUpperBound(const int index) const
     {
-        return (definitions.int_upperbounds[index]);
+        return (definitions->int_upperbounds[index]);
     }
     
     const int getIntLowerBound(const int index) const
     {
-        return (definitions.int_lowerbounds[index]);
+        return (definitions->int_lowerbounds[index]);
     }
     
     const unsigned long numberOfRealDecisionVariables() const
@@ -254,6 +265,7 @@ public:
             ar & BOOST_SERIALIZATION_NVP(constraints);
             ar & BOOST_SERIALIZATION_NVP(rank);
             ar & BOOST_SERIALIZATION_NVP(crowding_score);
+            ar & BOOST_SERIALIZATION_NVP(definitions);
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Individual& Individual);

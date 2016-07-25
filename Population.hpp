@@ -10,6 +10,7 @@
 #define Population_h
 
 #include <vector>
+#include <fstream>
 #include "Individual.hpp"
 
 class Population;
@@ -33,7 +34,7 @@ public:
     FrontsSPtr
     getFronts();
 
-    Population(int population_size, ProblemDefinitions & defs);
+    Population(int population_size, ProblemDefinitionsSPtr defs);
 
     void append(const Population & appending_pop);
 
@@ -77,6 +78,8 @@ public:
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
 
 #include "DebsNondominatedSorting.hpp"
 
@@ -97,7 +100,7 @@ public:
         return (front_sets);
     }
     
-    Population::Population(int population_size, ProblemDefinitions & defs)
+    Population::Population(int population_size, ProblemDefinitionsSPtr defs)
     {
         this->reserve(population_size);
         for (int i = 0; i < population_size; ++i)
@@ -189,14 +192,14 @@ public:
 
 template<typename RNG>
 PopulationSPtr
-intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitions & defs, RNG & rng)
+intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitionsSPtr defs, RNG & rng)
 {
     PopulationSPtr pop(new Population(population_size, defs));
 
     
-    for (int i = 0; i < defs.real_lowerbounds.size(); ++i)
+    for (int i = 0; i < defs->real_lowerbounds.size(); ++i)
     {
-        std::uniform_real_distribution<double> uniform(defs.real_lowerbounds[i],defs.real_upperbounds[i]);
+        std::uniform_real_distribution<double> uniform(defs->real_lowerbounds[i],defs->real_upperbounds[i]);
         
         BOOST_FOREACH(IndividualSPtr ind, *pop)
         {
@@ -205,9 +208,9 @@ intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitions & 
         
     }
     
-    for (int i = 0; i < defs.int_lowerbounds.size(); ++i)
+    for (int i = 0; i < defs->int_lowerbounds.size(); ++i)
     {
-        std::uniform_int_distribution<int> uniform(defs.int_lowerbounds[i],defs.int_upperbounds[i]);
+        std::uniform_int_distribution<int> uniform(defs->int_lowerbounds[i],defs->int_upperbounds[i]);
         
         BOOST_FOREACH(IndividualSPtr ind, *pop)
         {

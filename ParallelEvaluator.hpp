@@ -24,7 +24,7 @@ public:
 protected:
     boost::mpi::environment & mpi_env;
     boost::mpi::communicator & world;
-    ProblemDefinitions & problem_defs;
+    ProblemDefinitionsSPtr problem_defs;
     int number_processes;
     int number_clients;
     std::pair<std::vector<double>, std::vector<int> > decision_vars;
@@ -36,7 +36,7 @@ protected:
     std::reference_wrapper<std::ostream> log_stream;
     
 public:
-    ParallelEvaluatorBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs)
+    ParallelEvaluatorBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs)
         : mpi_env(_mpi_env), world(_world), problem_defs(_problem_defs), number_processes(world.size()), number_clients(number_processes - 1), max_tag(mpi_env.max_tag()), do_log(OFF), log_stream(std::cout)
     {
 
@@ -59,21 +59,21 @@ class ParallelEvaluatePopServer : public ParallelEvaluatorBase, public EvaluateP
 {
     
 public:
-    ParallelEvaluatePopServer(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs)
+    ParallelEvaluatePopServer(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs)
     {
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
         decision_vars = std::pair<std::vector<double>, std::vector<int> >
             (   std::piecewise_construct,
-                std::forward_as_tuple(std::vector<double>(problem_defs.real_lowerbounds.size(), 0.0)),
-                std::forward_as_tuple(std::vector<int>(problem_defs.int_lowerbounds.size(), 0))
+                std::forward_as_tuple(std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0)),
+                std::forward_as_tuple(std::vector<int>(problem_defs->int_lowerbounds.size(), 0))
             );
         
         objs_and_constraints = std::pair<std::vector<double>, std::vector<double> >
             (   std::piecewise_construct,
-         std::forward_as_tuple(std::vector<double>(problem_defs.minimise_or_maximise.size(), 0.0)),
-         std::forward_as_tuple(std::vector<double>(problem_defs.number_constraints, 0.0))
+         std::forward_as_tuple(std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0)),
+         std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
          );
         
         boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
@@ -148,7 +148,7 @@ class ParallelEvaluatePopClient : public ParallelEvaluatorBase
     ObjectivesAndConstraintsBase & eval;
     
 public:
-    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitions & _problem_defs, ObjectivesAndConstraintsBase & _eval)
+    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs), eval(_eval)
     {
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient

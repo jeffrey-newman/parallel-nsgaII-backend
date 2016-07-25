@@ -10,6 +10,9 @@
 #define ProblemDefinitions_h
 
 #include <limits>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/vector.hpp>
+
 
 
 enum MinOrMaxType {
@@ -64,7 +67,23 @@ public:
         
     }
 
+
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+            ar & BOOST_SERIALIZATION_NVP(real_lowerbounds);
+            ar & BOOST_SERIALIZATION_NVP(real_upperbounds);
+            ar & BOOST_SERIALIZATION_NVP(int_lowerbounds);
+            ar & BOOST_SERIALIZATION_NVP(int_upperbounds);
+            ar & BOOST_SERIALIZATION_NVP(minimise_or_maximise);
+            ar & BOOST_SERIALIZATION_NVP(number_constraints);
+    }
+
 };
+
+typedef boost::shared_ptr<ProblemDefinitions> ProblemDefinitionsSPtr;
 
 //ProblemDefinitions default_defs;
 //
