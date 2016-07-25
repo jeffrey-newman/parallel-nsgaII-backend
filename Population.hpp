@@ -218,4 +218,16 @@ intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitions & 
                        
 }
 
+void
+restore_population(PopulationSPtr pop, const char * filename)
+{
+    // open the archive
+    std::ifstream ifs(filename);
+    assert(ifs.good());
+    boost::archive::xml_iarchive ia(ifs);
+
+    // restore the schedule from the archive
+    ia >> BOOST_SERIALIZATION_NVP(*pop);
+}
+
 #endif /* Population_h */
