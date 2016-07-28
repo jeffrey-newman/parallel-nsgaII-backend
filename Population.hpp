@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <fstream>
+#include <boost/filesystem.hpp>
 #include "Individual.hpp"
 
 class Population;
@@ -222,10 +223,10 @@ intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitionsSPt
 }
 
 void
-restore_population(PopulationSPtr pop, const char * filename)
+restore_population(PopulationSPtr pop, boost::filesystem::path filename)
 {
     // open the archive
-    std::ifstream ifs(filename);
+    std::ifstream ifs(filename.c_str());
     assert(ifs.good());
     boost::archive::xml_iarchive ia(ifs);
 
