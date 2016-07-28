@@ -57,7 +57,9 @@ private:
 //    Visualise do_visualise;
     PopulationSPtr pop;
     Log do_log;
+    bool is_fstream = false;
     std::reference_wrapper<std::ostream> log_stream;
+    boost::filesystem::path f_path;
     
 public:
 
@@ -88,11 +90,24 @@ public:
     }
 
     void
-    log(Log _val = LVL1, std::ostream & _stream = std::cout)
+    log(std::ostream & _stream = std::cout, Log _val = LVL1)
     {
         do_log = _val;
         if (do_log > OFF)
         {
+            is_fstream = false;
+            log_stream = _stream;
+        }
+    }
+
+    void
+    log(std::ofstream & _stream, boost::filesystem::path _f_path, Log _val = LVL1)
+    {
+        do_log = _val;
+        if (do_log > OFF)
+        {
+            is_fstream = true;
+            f_path = _f_path;
             log_stream = _stream;
         }
     }
@@ -118,7 +133,17 @@ public:
 
         int no_gens = 0;
 
+
+
         do {            
+
+            if (is_fstream == true)
+            {
+                std::ofstream * fstreamPtr = dynamic_cast<std::ofstream *>(&(log_stream.get()));
+                fstreamPtr->close();
+                fstreamPtr->open(f_path.c_str(), std::ios_base::out | std::ios_base::trunc);
+                if (!fstreamPtr->is_open()) do_log = OFF;
+            }
             if (do_log > OFF)  log_stream.get() << "Generation: " << ++no_gens << "\n";
             if (do_log > OFF)  log_stream.get() << "parents: \n" << parents;
 
