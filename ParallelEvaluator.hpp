@@ -109,7 +109,9 @@ public:
         
         int individual = 0;
         std::vector<boost::mpi::request> reqs_out(number_clients);
-        for (; individual < number_clients; ++individual)
+        int num_initial_jobs = number_clients;
+        if (num_initial_jobs < population->populationSize()) num_initial_jobs = population->populationSize();
+        for (; individual < num_initial_jobs; ++individual)
         {
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
