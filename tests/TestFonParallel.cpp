@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
         //create evaluator server
         std::string eval_log_fname("mpi_msgs.txt");
         std::ofstream eval_strm(eval_log_fname.c_str());
-        ParallelEvaluatePopServer eval_server(env, world, test_problem.getProblemDefinitions());
+        ParallelEvaluatePopServerNonBlocking eval_server(env, world, test_problem.getProblemDefinitions());
         if (eval_strm.is_open())
         {
             eval_server.log(ParallelEvaluatorBase::LVL1, eval_strm);

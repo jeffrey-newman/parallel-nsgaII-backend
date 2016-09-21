@@ -9,6 +9,7 @@
 #ifndef ParallelEvaluator_h
 #define ParallelEvaluator_h
 
+#include <ctime>
 #include <boost/mpi.hpp>
 #include "Evaluation.hpp"
 #include <boost/serialization/vector.hpp>
@@ -29,16 +30,30 @@ protected:
     int number_clients;
     std::pair<std::vector<double>, std::vector<int> > decision_vars;
     std::pair<std::vector<double>, std::vector<double> > objs_and_constraints;
+    std::pair<std::vector<double>, std::vector<double> > worst_objs_and_constraints;
     boost::mpi::content dv_c;
     boost::mpi::content oc_c;
     int max_tag;
     Log do_log;
     std::reference_wrapper<std::ostream> log_stream;
+    std::time_t timeout_time;
     
 public:
     ParallelEvaluatorBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs)
         : mpi_env(_mpi_env), world(_world), problem_defs(_problem_defs), number_processes(world.size()), number_clients(number_processes - 1), max_tag(mpi_env.max_tag()), do_log(OFF), log_stream(std::cout)
     {
+
+        worst_objs_and_constraints.first.resize(problem_defs->minimise_or_maximise.size());
+        for (int i = 0; i < worst_objs_and_constraints.first.size(); ++i)
+        {
+            if (problem_defs->minimise_or_maximise.at(i) == MINIMISATION ) worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::max();
+            if (problem_defs->minimise_or_maximise.at(i) == MAXIMISATION ) worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::min();
+        }
+        worst_objs_and_constraints.second.resize(problem_defs->number_constraints);
+        BOOST_FOREACH(double & constraint, worst_objs_and_constraints.second)
+        {
+            constraint = std::numeric_limits<double>::max();
+        }
 
     }
 
@@ -110,7 +125,7 @@ public:
         int individual = 0;
         std::vector<boost::mpi::request> reqs_out(number_clients);
         int num_initial_jobs = number_clients;
-        if (num_initial_jobs < population->populationSize()) num_initial_jobs = population->populationSize();
+        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
         for (; individual < num_initial_jobs; ++individual)
         {
             decision_vars.first = (*population)[individual]->getRealDVVector();
@@ -199,9 +214,11 @@ class ParallelEvaluatePopServerNonBlocking : public ParallelEvaluatorBase, publi
 {
 
 public:
-    ParallelEvaluatePopServerNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs)
+    ParallelEvaluatePopServerNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs)
     {
+        this->timeout_time = _timeout_time;
+
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
         decision_vars = std::pair<std::vector<double>, std::vector<int> >
@@ -209,12 +226,6 @@ public:
                 std::forward_as_tuple(std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0)),
                 std::forward_as_tuple(std::vector<int>(problem_defs->int_lowerbounds.size(), 0))
             );
-
-        objs_and_constraints = std::pair<std::vector<double>, std::vector<double> >
-            (   std::piecewise_construct,
-         std::forward_as_tuple(std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0)),
-         std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
-         );
 
         boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
         boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
@@ -232,7 +243,7 @@ public:
             int client_id = i + 1;
 //            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate" << std::endl;
-            world.send(client_id, max_tag, dv_c);
+            world.isend(client_id, max_tag, dv_c);
         }
     }
 
@@ -247,46 +258,149 @@ public:
             if (do_log > OFF) log_stream.get() << "problem: max tag too small, population too large for mpi" << std::endl;
         }
 
+        typedef std::pair<const int, boost::mpi::request> JobRunningT;
         std::map<int, boost::mpi::request> jobs_running;
 
         int individual = 0;
-        std::vector<boost::mpi::request> reqs_out(number_clients);
+//        std::vector<boost::mpi::request> reqs_out(number_clients);
         int num_initial_jobs = number_clients;
-        if (num_initial_jobs < population->populationSize()) num_initial_jobs = population->populationSize();
+        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
         for (; individual < num_initial_jobs; ++individual)
         {
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
-            jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c));
+            jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
         }
-//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
 
-        while (individual < population->populationSize())
+        // keep jobs out there for slave eficiency (so queue an additional job for each slave)
+        int num_additional_jobs = number_clients;
+        if ((num_additional_jobs + num_initial_jobs) > population->populationSize()) num_additional_jobs = population->populationSize() - num_initial_jobs;
+        for (int i = 0; i < num_additional_jobs; ++i)
         {
-            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
-            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
-            jobs_running.insert(std::make_pair(individual, world.isend(s.source(), individual, dv_c));
-
+            int client_id = individual + 1 - num_initial_jobs;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
             ++individual;
         }
 
-        for (int i = 0; i < number_clients; ++i)
+//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
+        boost::mpi::status s;
+
+        while (individual < population->populationSize())
+        {          
+            //start a receive request, non-blocking
+            boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
+            //get start time
+            std::time_t start_time = std::time(NULL);
+            // test if we have made a receive.
+            boost::optional<boost::mpi::status> osr = r.test();
+            if (!osr)
+            {
+                //loop until we have received, or taken too long
+                while (!osr && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
+                {
+                    //wait a bit.
+                    osr = r.test();
+                }
+            }
+
+            //By now we either have received the data, or taken too long, so...
+            if (!osr)
+            {
+              //we must have timed out
+              r.cancel();
+            }
+            else
+            {
+                s = osr.get();
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+                (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+                (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
+                if (!oss)
+                {
+                    if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
+                    jobs_running[s.tag()].cancel();
+                }
+                jobs_running.erase(s.tag());
+
+                // Send out new job.
+                decision_vars.first = (*population)[individual]->getRealDVVector();
+                decision_vars.second = (*population)[individual]->getIntDVVector();
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+                jobs_running.insert(std::make_pair(individual, world.isend(s.source(), individual, dv_c)));
+
+                ++individual;
+            }
+
+
+
+
+        }
+
+        // test for sanity
+        if ((num_additional_jobs + num_initial_jobs) != jobs_running.size())
         {
-            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
-            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " Logic error: job accounting wrong or there were incomplete jobs" << std::endl;
+        }
 
+        for (int i = 0; i < (num_initial_jobs + num_additional_jobs); ++i)
+        {
+            //start a receive request, non-blocking
+            boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
+            //get start time
+            std::time_t start_time = std::time(NULL);
+            // test if we have made a receive.
+            boost::optional<boost::mpi::status> os = r.test();
+            if (!os)
+            {
+                //loop until we have received, or taken too long
+                while (!os && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
+                {
+                    //wait a bit.
+                    os = r.test();
+                }
+            }
 
-//            world.send(s.source(), max_tag, dv_c);
+            //By now we either have received the data, or taken too long, so...
+            if (!os)
+            {
+              //we must have timed out
+              r.cancel();
+            }
+            else
+            {
+                boost::mpi::status s = os.get();
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+                (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+                (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
+                if (!oss)
+                {
+                    if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
+                    jobs_running[s.tag()].cancel();
+                }
+                jobs_running.erase(s.tag());
+            }
+
+        }
+
+        BOOST_FOREACH(JobRunningT & job, jobs_running)
+        {
+            // Failed jobs.
+            // set decision variables to something not so good.
+            boost::optional<boost::mpi::status> oss = job.second.test();
+            if (!oss)
+            {
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
+                job.second.cancel();
+            }
+            (*population)[job.first]->setObjectives(this->worst_objs_and_constraints.first);
+            (*population)[job.first]->setConstraints(this->worst_objs_and_constraints.second);
         }
 
     }
