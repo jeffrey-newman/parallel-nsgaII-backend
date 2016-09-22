@@ -226,6 +226,12 @@ public:
                 std::forward_as_tuple(std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0)),
                 std::forward_as_tuple(std::vector<int>(problem_defs->int_lowerbounds.size(), 0))
             );
+        
+        objs_and_constraints = std::pair<std::vector<double>, std::vector<double> >
+        (   std::piecewise_construct,
+         std::forward_as_tuple(std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0)),
+         std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
+         );
 
         boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
         boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
@@ -430,6 +436,9 @@ public:
     {
 
         bool do_continue = true;
+        boost::mpi::request rq;
+        bool first_time = true;
+        
         while (do_continue)
         {
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " waiting to receive" << std::endl;
@@ -445,7 +454,17 @@ public:
                 //calc objective
                 objs_and_constraints = eval(decision_vars.first, decision_vars.second);
                 if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << std::endl;
-                world.send(0, s.tag(), oc_c);
+                if(!first_time)
+                {
+                    rq.wait();
+                    
+                }
+                else
+                {
+                    first_time = false;
+                }
+                rq = world.isend(0, s.tag(), oc_c);
+                
             }
         }
     }

@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
         RNG rng(seed);
 
         // The optimiser
-        int max_gen = 10;
+        int max_gen = 100;
         NSGAII<RNG> optimiser(rng, eval_server);
         MaxGenCheckpoint max_gen_terminate(max_gen);
     //    SavePopCheckpoint save_pop(1, working_dir);
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 
 
         // create evaluator client
-        ParallelEvaluatePopClient eval_client(env, world, test_problem.getProblemDefinitions(), test_problem);
+        ParallelEvaluatePopClientNonBlocking eval_client(env, world, test_problem.getProblemDefinitions(), test_problem);
         //logging eval_client
         std::string log_filename = "evaluation_timing_worker" + std::to_string(world.rank()) + ".log";
         std::ofstream eval_strm(log_filename.c_str());
