@@ -47,8 +47,8 @@ private:
     EvaluatePopulation default_evaluator;
     EvaluatePopulationBase & pop_eval;
     TournamentSelection<RNG> selection;
-    DebsSBXCrossover<RNG> crossover;
-    DebsPolynomialMutation<RNG> mutation;
+    CombinedRealIntCrossover<RNG> crossover;
+    CombinedRealIntMutation<RNG> mutation;
     Checkpoints my_checkpoints;
     int max_gen;
 //    PlotFrontVTK plot_front1;
@@ -112,10 +112,10 @@ public:
         }
     }
 
-    DebsPolynomialMutation<RNG> &
+    MutationBase &
     getRealMutationOperator()
     {
-        return mutation;
+        return (mutation.getRealMutationOperator());
     }
     
     PopulationSPtr

@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
         // Initialise population
         int pop_size = 1000;
         PopulationSPtr pop = intialisePopulationRandomDVAssignment(pop_size, test_problem.getProblemDefinitions(), rng);
-        SetMutationInverseDVSize(pop->at(0), optimiser.getRealMutationOperator());
+        optimiser.getRealMutationOperator().setMutationInverseDVSize(pop->at(0));
 
         // Run the optimisation
         optimiser(pop);

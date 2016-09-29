@@ -21,52 +21,51 @@
 #include <boost/serialization/nvp.hpp>
 
 
+class CrossoverBase
+{
+public:
+    virtual void operator()(Individual & individal_1, Individual & individal_2) = 0;
+};
+
 double default_eps = 0.00001;
-double default_crossoverp = 0.9;
 double default_eta = 20.0;
 std::uniform_real_distribution<double> cross_uniform(0.0,1.0);
-double default_proportion_crossed = 0.5;
 unsigned seed_crossover = std::chrono::system_clock::now().time_since_epoch().count();
 std::mt19937 default_rng_crossover(seed_crossover);
 
 template <typename RNG = std::mt19937>
-class DebsSBXCrossover
+class DebsSBXCrossover : public CrossoverBase
 {
     RNG & random_number_gen;
-    double & probability_crossover;
     double & eps;
     double & eta_c;
-    double & proportion_crossed;
     
     
 public:
     
-    DebsSBXCrossover(RNG & rng = default_rng_crossover, double & eta = default_eta, double & _probability_crossover = default_crossoverp, double & _eps = default_eps, double & _proportion_crossed = default_proportion_crossed) :
-    random_number_gen(rng), probability_crossover(_probability_crossover), eps(_eps), eta_c(eta),  proportion_crossed(_proportion_crossed)
+    DebsSBXCrossover(RNG & rng = default_rng_crossover, double & eta = default_eta, double & _eps = default_eps) :
+    random_number_gen(rng), eps(_eps), eta_c(eta)
     {
         
     }
-
-    void setProportionCrossed(double & _crossover_proportion)
-    {
-        proportion_crossed = _crossover_proportion;
-    }
-
-    void setEps(double & _eps)
+    
+    DebsSBXCrossover & setEps(double & _eps)
     {
         eps = _eps;
+        return (*this);
     }
-
-    void setEtaC(double & _eta_c)
+    
+    DebsSBXCrossover & setEtaC(double & _eta_c)
     {
         eta_c = _eta_c;
+        return (*this);
     }
     
     
-    void crossover_implementation(Individual & individal_1, Individual & individal_2)
+    virtual void operator()(Individual & individal_1, Individual & individal_2)
     {
-//        individal_1.crossovered = true;
-//        individal_2.crossovered = true;
+        //        individal_1.crossovered = true;
+        //        individal_2.crossovered = true;
         for (int j=0;j < individal_1.numberOfRealDecisionVariables(); ++j)
         {//for each real in chrom
             
@@ -74,7 +73,7 @@ public:
             const double & dvar_value_par2 = individal_2.getRealDV(j);
             const double & yl = individal_1.getRealLowerBound(j);//lower limt of variable j of ind i
             const double & yu = individal_1.getRealUpperBound(j);//upper limt of variable j of ind i
-
+            
             if (cross_uniform(random_number_gen)<=0.5) //only half of the bits in chrom2 will be crossed
             {
                 double y1, y2;
@@ -111,7 +110,7 @@ public:
                         betaq = pow((rand * alpha), (1.0 / (eta_c + 1.0)));
                     else
                         betaq=pow((1.0 / (2.0 - rand * alpha)), (1.0 / (eta_c + 1.0)));
-
+                    
                     double dvar_val_child2 = 0.5 * ((y1 + y2) + betaq * (y2 - y1));
                     
                     if (dvar_val_child1<yl) dvar_val_child1=yl;
@@ -136,6 +135,97 @@ public:
         
     }
     
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & BOOST_SERIALIZATION_NVP(eps);
+        ar & BOOST_SERIALIZATION_NVP(eta_c);
+
+    }
+};
+
+template <typename RNG = std::mt19937>
+class OnePointCrossover : public CrossoverBase
+{
+    RNG & random_number_gen;
+    
+    
+public:
+    
+    OnePointCrossover(RNG & rng = default_rng_crossover) :
+    random_number_gen(rng)
+    {
+        
+    }
+    
+    virtual void operator()(Individual & individal_1, Individual & individal_2)
+    {
+        //        individal_1.crossovered = true;
+        //        individal_2.crossovered = true;
+        //Determine location of crossover.
+        int location = int(std::ceil(cross_uniform(random_number_gen) * (individal_1.numberOfIntDecisionVariables() - 1)));
+        
+        // To the right of location, the chromosones are crossovered.
+        
+        for (int j=0;j < individal_1.numberOfIntDecisionVariables(); ++j)
+        {//for each real in chrom
+            
+//            if (j <= location) // no crossover
+//            {
+//                // Do nothing. Leave each chromosone as it is
+//            }
+            if (j > location)
+            {
+                int val = individal_1.getIntDV(j);
+                individal_1.setIntDV(j, individal_2.getIntDV(j));
+                individal_2.setIntDV(j, val);                
+            }
+        }
+        
+    }
+    
+    
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        // no persistent information required to rebuild...
+    }
+};
+
+
+
+
+
+//double default_proportion_crossed = 0.5;
+double default_crossoverp = 0.9;
+DebsSBXCrossover<> default_real_xover;
+OnePointCrossover<> default_int_xover;
+
+template <typename RNG = std::mt19937>
+class CombinedRealIntCrossover
+{
+    RNG & random_number_gen;
+    double & probability_crossover;
+    CrossoverBase & real_xover;
+    CrossoverBase & int_xover;
+    
+    
+public:
+    
+    CombinedRealIntCrossover(RNG & rng = default_rng_crossover, double _probability_crossover = default_crossoverp, CrossoverBase & _real_xover = default_real_xover, CrossoverBase & _int_xover = default_int_xover) :
+    random_number_gen(rng), probability_crossover(_probability_crossover), real_xover(_real_xover), int_xover(_int_xover)
+    {
+        
+    }
+
+    CombinedRealIntCrossover & setProbabilityCrossover(double & _probability_crossover)
+    {
+        probability_crossover = _probability_crossover;
+        return (*this);
+    }
+    
     void
     operator()(PopulationSPtr pop)
     {
@@ -155,7 +245,8 @@ public:
 //                ++x_count;
                 IndividualSPtr parent1 = (*pop)[i];
                 IndividualSPtr parent2 = (*pop)[i+1];
-                crossover_implementation(*parent1, *parent2);
+                real_xover(*parent1, *parent2);
+                int_xover(*parent1, *parent2);
             }
         }
 
@@ -169,11 +260,13 @@ public:
     void serialize(Archive & ar, const unsigned int version)
     {
             ar & BOOST_SERIALIZATION_NVP(probability_crossover);
-            ar & BOOST_SERIALIZATION_NVP(eps);
-            ar & BOOST_SERIALIZATION_NVP(eta_c);
-            ar & BOOST_SERIALIZATION_NVP(proportion_crossed);
+        ar & BOOST_SERIALIZATION_NVP(real_xover);
+        ar & BOOST_SERIALIZATION_NVP(int_xover);
     }
 };
+
+
+
 
 
 

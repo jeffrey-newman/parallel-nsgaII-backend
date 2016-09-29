@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_samples; ++i)
     {
         Individual muted1(ind1);
-        mutation_tester.mutation_implementation(muted1);
+        mutation_tester.operator()(muted1);
         results.push_back(muted1.getRealDV(0));
         //        std::cout << child1[0] << std::endl;
         //        std::cout << child2[0] << std::endl;

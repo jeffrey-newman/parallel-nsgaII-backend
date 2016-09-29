@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     double proportion_crossed = 1.0;
     RNG_t rng(seed);
     
-    DebsSBXCrossover<RNG_t> crossover_tester(rng, eta, crossover_probability, eps, proportion_crossed);
+    DebsSBXCrossover<RNG_t> crossover_tester(rng, eta, eps);
     
     int number_dvs = 1; //number of decision variables
     double min_value = -1.0;
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     {
         Individual child1(parent1);
         Individual child2(parent2);
-        crossover_tester.crossover_implementation(child1, child2);
+        crossover_tester.operator()(child1, child2);
         results.push_back(child1.getRealDV(0));
         results.push_back(child2.getRealDV(0));
 //        std::cout << child1[0] << std::endl;
