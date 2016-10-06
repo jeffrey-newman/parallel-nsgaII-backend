@@ -180,4 +180,64 @@ public:
     }
 };
 
+
+class IntSum : public ObjectivesAndConstraintsBase
+{
+private:
+    
+    int num_objectives;
+    int num_real_decision_vars;
+    int num_int_decision_vars;
+    int num_constraints;
+    double min_dv_value;
+    double max_dv_value;
+    
+    ProblemDefinitionsSPtr prob_defs;
+    std::pair<std::vector<double>, std::vector<double> > objectives_and_constrataints;
+    
+    //    std::vector<double> constraints;
+    //    std::vector<double> objectives;
+    //
+    
+public:
+    IntSum()
+    :   num_objectives(2),
+    num_real_decision_vars(0),
+    num_int_decision_vars(10),
+    num_constraints(0),
+    min_dv_value(1),
+    max_dv_value(5),
+    prob_defs(new ProblemDefinitions(num_real_decision_vars, 0, 0,  num_int_decision_vars, min_dv_value, max_dv_value, num_objectives, MINIMISATION, num_constraints)),
+    objectives_and_constrataints(std::piecewise_construct, std::make_tuple(num_objectives, std::numeric_limits<double>::max()), std::make_tuple(num_constraints))
+    {
+        
+    }
+    
+    std::pair<std::vector<double>, std::vector<double> > &
+    operator()(const std::vector<double>  & real_decision_vars, const std::vector<int> & int_decision_vars)
+    {
+        std::vector<double> & obj = this->objectives_and_constrataints.first;
+        
+        double sum = 0;
+        for (int i = 0; i < num_int_decision_vars; ++i)
+        {
+            sum += int_decision_vars[i];
+        }
+        obj[0] = sum;
+        sum = 0;
+        for (int i = 0; i < num_int_decision_vars; ++i)
+        {
+            sum += 1.0 / (double)int_decision_vars[i];
+        }
+        obj[1] = sum;
+        return (objectives_and_constrataints);
+    }
+    
+    ProblemDefinitionsSPtr & getProblemDefinitions()
+    {
+        return (prob_defs);
+    }
+};
+
+
 #endif /* TestFunctions_h */

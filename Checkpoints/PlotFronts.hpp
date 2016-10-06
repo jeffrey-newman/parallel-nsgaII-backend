@@ -141,9 +141,14 @@ public:
                 for (int k = 0; k < front_size; ++k)
                 {
                     std::stringstream label;
-                    for (int l = 0; l < (*fronts)[i][k]->numberOfRealDecisionVariables(); ++l)
+                    int l = 0;
+                    for (; l < (*fronts)[i][k]->numberOfRealDecisionVariables(); ++l)
                     {
                         label << "x" << std::to_string(l+1) << ": " << (*fronts)[i][k]->getRealDV(l) << " ";
+                    }
+                    for (int m = 0; m < (*fronts)[i][k]->numberOfIntDecisionVariables(); ++m)
+                    {
+                        label << std::to_string(l+m) << ": " << (*fronts)[i][k]->getIntDV(m) << " ";
                     }
 //                    label.precision(4);
                     label << "crowd_dist: " << (*fronts)[i][k]->getCrowdingScore();
@@ -164,7 +169,8 @@ public:
 //        points->SetWidth(1.0);
 //        vtkPlotPoints::SafeDownCast(points)->SetMarkerStyle(vtkPlotPoints::CROSS);
         
-        for (int i = 0; i < front_tables_objs.size(); ++i)
+//        for (int i = 0; i < front_tables_objs.size(); ++i)
+            for (int i = front_tables_objs.size() -1; i >= 0; --i)
         {
 //            int alpha = (255 / front_tables.size()) * (i + 1);
 //            front_tables[i]->Dump();
@@ -198,7 +204,8 @@ public:
         crowd_dist_labels_decs.clear();
         chart_decs->ClearPlots();
 
-        int num_dvs = fronts->front().front()->numberOfRealDecisionVariables();
+        int num_real_dvs = fronts->front().front()->numberOfRealDecisionVariables();
+        int num_int_dvs = fronts->front().front()->numberOfIntDecisionVariables();
         for (int i = 0; i < number_of_fronts; ++i)
         {
             int front_size = (*fronts)[i].size();
@@ -209,12 +216,21 @@ public:
                 front_tables_decs.push_back(vtkSmartPointer<vtkTable>::New());
                 vtkTable * table_decs = front_tables_decs[i];
 
-                // Add a column to the table for each objective
-                for (int j = 0; j < num_dvs; ++j)
+                // Add a column to the table for each dv
+                for (int j = 0; j < num_real_dvs; ++j)
                 {
                     obj_data_decs.push_back(vtkSmartPointer<vtkFloatArray>::New());
-                    vtkFloatArray * array_decs = obj_data_decs[i * num_dvs + j];
-                    std::string name = std::string("DV ").append(std::to_string(j+1));
+                    vtkFloatArray * array_decs = obj_data_decs[i * num_real_dvs + j];
+                    std::string name = std::string("rDV ").append(std::to_string(j+1));
+                    array_decs->SetName( name.c_str() );
+                    table_decs->AddColumn( array_decs );
+                }
+                // Add a column to the table for each dv
+                for (int j = 0; j < num_int_dvs; ++j)
+                {
+                    obj_data_decs.push_back(vtkSmartPointer<vtkFloatArray>::New());
+                    vtkFloatArray * array_decs = obj_data_decs[number_of_fronts * num_real_dvs + i * num_int_dvs + j];
+                    std::string name = std::string("iDV ").append(std::to_string(j+1));
                     array_decs->SetName( name.c_str() );
                     table_decs->AddColumn( array_decs );
                 }
@@ -226,12 +242,20 @@ public:
                 table_decs->AddColumn(crowd_dist_label);
 
                 table_decs->SetNumberOfRows((*fronts)[i].size());
-
-                for (int j = 0; j < num_dvs; ++j)
+                
+                int j = 0;
+                for (; j < num_real_dvs; ++j)
                 {
                     for (int k = 0; k < front_size; ++k)
                     {
                         table_decs->SetValue(k, j, (*fronts)[i][k]->getRealDV(j));
+                    }
+                }
+                for (int l = 0; l < num_int_dvs; ++l)
+                {
+                    for (int k = 0; k < front_size; ++k)
+                    {
+                        table_decs->SetValue(k, j + l, (*fronts)[i][k]->getIntDV(l));
                     }
                 }
 
@@ -244,14 +268,15 @@ public:
                     }
 //                    label.precision(4);
                     label << "crowd_dist: " << (*fronts)[i][k]->getCrowdingScore();
-                    table_decs->SetValue(k, num_dvs, label.str().c_str());
+                    table_decs->SetValue(k, num_real_dvs + num_int_dvs, label.str().c_str());
                 }
             }
         }
 
 
 
-        for (int i = 0; i < front_tables_decs.size(); ++i)
+//        for (int i = 0; i < front_tables_decs.size(); ++i)
+            for (int i = front_tables_decs.size() -1; i >= 0; --i)
         {
 //            int alpha = (255 / front_tables.size()) * (i + 1);
 //            front_tables[i]->Dump();

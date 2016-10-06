@@ -31,7 +31,7 @@ public:
     bool
     compareObjective(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
     {
-        compareObjective(*ind1, *ind2, index);
+        return (compareObjective(*ind1, *ind2, index));
     }
 
     static int

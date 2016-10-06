@@ -66,6 +66,16 @@ public:
     {
         
     }
+    
+    ProblemDefinitions(int num_real_dvs, double real_min, double real_max, int num_int_dvs, int int_min, int int_max, std::vector<MinOrMaxType> & _minimise_or_maximise, int num_constraints)
+    :   real_lowerbounds(num_real_dvs, real_min), real_upperbounds(num_real_dvs, real_max),
+    int_lowerbounds(num_int_dvs, int_min),
+    int_upperbounds(num_int_dvs, int_max),
+    minimise_or_maximise(_minimise_or_maximise),
+    number_constraints(num_constraints)
+    {
+        
+    }
 
 
 

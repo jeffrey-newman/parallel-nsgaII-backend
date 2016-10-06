@@ -13,7 +13,9 @@
 #include <boost/serialization/map.hpp>
 #include "../Serialization/SerializeBoostPath.hpp"
 #include <boost/archive/xml_oarchive.hpp>
-
+#include <boost/date_time.hpp>
+#include <boost/optional.hpp>
+#include <boost/timer/timer.hpp>
 
 
 std::vector<double> dummy_point {0,0};
@@ -37,7 +39,7 @@ private:
     double volume;
     int dataNumber;
     std::map<int, double> hypervolume_log;
-    boost::filesystem::path log_path;
+    boost::filesystem::path save_dir;
     int generation;
     int gen_frequency;
     DoTerminate do_terminate;
@@ -48,73 +50,241 @@ private:
     std::reference_wrapper<std::ostream> log_stream;
     bool unitize;
     Better is_maximize_hvol;
+    bool calc_ref_first_gen;
 
 
 public:
-    Hypervolume(std::vector<double> & _ref_point,
-                boost::filesystem::path log_dir,
-                int _gen_frequency = 1,
+    Hypervolume(int _gen_frequency = 1,
+                boost::optional<boost::filesystem::path> _save_dir = boost::none,
                 DoTerminate _do_terminate = NO_TERMINATION,
                 int _max_gen_no_improvement = 100,
-                Better _is_maximise_hvol = MAXIMISE,
-                std::vector<double> & _unitize_point = dummy_point)
-        : ref_point(_ref_point),
-          unitize_point(_unitize_point),
-          axis_lengths(_ref_point.size(), 0.0),
-          dimension(_ref_point.size()),
-          ref_point_array(new double[dimension]),
-          volume(0),
-          dataNumber(0),
-          generation(0),
-          gen_frequency(_gen_frequency),
-          do_terminate(_do_terminate),
-          gens_no_improvement(0),
-          max_gens_no_improvement(_max_gen_no_improvement),
-          best_hypervolume(std::numeric_limits<double>::min()),
-          do_log(OFF),
-          log_stream(std::cout),
-          unitize(true),
-          is_maximize_hvol(_is_maximise_hvol)
+                boost::optional<std::vector<double> > _ref_point = boost::none,
+                boost::optional<std::vector<double> >  _unitize_point = boost::none,
+                Better _is_maximise_hvol = MAXIMISE
+                )
+    :
+    volume(0),
+    dataNumber(0),
+    generation(0),
+    gen_frequency(_gen_frequency),
+    do_terminate(_do_terminate),
+    gens_no_improvement(0),
+    max_gens_no_improvement(_max_gen_no_improvement),
+    log_stream(std::cout),
+    is_maximize_hvol(_is_maximise_hvol)
     {
-        for (int var = 0; var < ref_point.size(); ++var)
+        
+        
+        if (_ref_point)
         {
-            ref_point_array[var] = 0.0;
-        }
-
-        if (max_gens_no_improvement / gen_frequency < 3)
-        {
-            std::cout << "Warning: In Hypervolume checkpoint, termination "
-                         "results based on less than three calculations of the hypervolume"
-                      << std::endl;
-        }
-
-        if (unitize_point == dummy_point)
-        {
-            unitize = false;
+            calc_ref_first_gen = false;
+            ref_point = _ref_point.get();
+            axis_lengths = std::vector<double>(ref_point.size(), 0.0);
+            dimension = ref_point.size();
+            ref_point_array = new double[dimension];
+            for (int var = 0; var < ref_point.size(); ++var)
+            {
+                ref_point_array[var] = ref_point[var];
+            }
+            
         }
         else
         {
-            for (int i = 0; i < ref_point.size(); ++i)
+            calc_ref_first_gen = true;
+        }
+        
+        if (_unitize_point)
+        {
+            unitize = true;
+            unitize_point = _unitize_point.get();
+            if (_ref_point)
             {
-                axis_lengths[i] = std::abs(unitize_point[i] - ref_point[i]);
+                for (int i = 0; i < ref_point.size(); ++i)
+                {
+                    axis_lengths[i] = std::abs(unitize_point[i] - ref_point[i]);
+                }
             }
         }
+        else
+        {
+            unitize = false;
+        }
+        
+        
+        if (_is_maximise_hvol == MAXIMISE)
+        {
+            best_hypervolume = std::numeric_limits<double>::min();
+        }
+        else
+        {
+            best_hypervolume = std::numeric_limits<double>::max();
+        }
+        
+        if(_save_dir)
+        {
+            do_log = LVL3;
+            save_dir = _save_dir.get();
+            std::string filename = "logHypervolume_" + boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) + ".log";
+            boost::filesystem::path logfile =  save_dir / filename;
+            std::ofstream logging_file;
+            logging_file.open(logfile.c_str(), std::ios_base::app);
+            if (!logging_file.is_open())
+            {
+                do_log = OFF;
+                std::cout << "attempt to log in hypervolume evaluator failed\n";
+            }
+            else
+            {
+                log_stream = logging_file;
+            }
+            
+        }
+        else
+        {
+            do_log = OFF;
+        }
+        
+        
+        if (max_gens_no_improvement / gen_frequency < 3)
+        {
+            std::cout << "Warning: In Hypervolume checkpoint, termination "
+            "results based on less than three calculations of the hypervolume"
+            << std::endl;
+        }
+        
+        
     }
+    
+    
+//    Hypervolume(std::vector<double> & _ref_point,
+//                boost::filesystem::path log_dir,
+//                int _gen_frequency = 1,
+//                DoTerminate _do_terminate = NO_TERMINATION,
+//                int _max_gen_no_improvement = 100,
+//                
+//                std::vector<double> & _unitize_point = dummy_point)
+//        : ref_point(_ref_point),
+//          unitize_point(_unitize_point),
+//          axis_lengths(_ref_point.size(), 0.0),
+//          dimension(_ref_point.size()),
+//          ref_point_array(new double[dimension]),
+//          volume(0),
+//          dataNumber(0),
+//          generation(0),
+//          gen_frequency(_gen_frequency),
+//          do_terminate(_do_terminate),
+//          gens_no_improvement(0),
+//          max_gens_no_improvement(_max_gen_no_improvement),
+//          best_hypervolume(std::numeric_limits<double>::min()),
+//          do_log(OFF),
+//          log_stream(std::cout),
+//          unitize(true),
+//          is_maximize_hvol(_is_maximise_hvol)
+//    {
+//        for (int var = 0; var < ref_point.size(); ++var)
+//        {
+//            ref_point_array[var] = 0.0;
+//        }
+//
+//        if (max_gens_no_improvement / gen_frequency < 3)
+//        {
+//            std::cout << "Warning: In Hypervolume checkpoint, termination "
+//                         "results based on less than three calculations of the hypervolume"
+//                      << std::endl;
+//        }
+//
+//        if (unitize_point == dummy_point)
+//        {
+//            unitize = false;
+//        }
+//        else
+//        {
+//            for (int i = 0; i < ref_point.size(); ++i)
+//            {
+//                axis_lengths[i] = std::abs(unitize_point[i] - ref_point[i]);
+//            }
+//        }
+//    }
 
     ~Hypervolume()
     {
         delete[] ref_point_array;
-        boost::filesystem::path save_file = log_path / ("hypervolume.xml");
-        std::ofstream ofs(save_file.c_str());
-        assert(ofs.good());
-        boost::archive::xml_oarchive oa(ofs);
-        oa << boost::serialization::make_nvp("hypervolume", *this);
-        ofs.close();
+        if (do_log > OFF)
+        {
+            boost::filesystem::path save_file = save_dir / ("hypervolume.xml");
+            std::ofstream ofs(save_file.c_str());
+            assert(ofs.good());
+            boost::archive::xml_oarchive oa(ofs);
+            oa << boost::serialization::make_nvp("hypervolume", *this);
+            ofs.close();
+        }
     }
 
     bool operator() (PopulationSPtr population)
     {
         // initialize volume
+        
+        if (calc_ref_first_gen)
+        {
+            if (population->getFronts()->size() ==0)
+            {
+                if (do_log > OFF) log_stream.get() << "Hypervolume: Front has no solutions\n";
+                volume = 0;
+            }
+            else
+            {
+                Front first_front = population->getFronts()->at(0);
+                dataNumber = first_front.size();
+                dimension = population->at(0)->numberOfObjectives();
+                
+                
+//                double* data = new double[dataNumber * dimension];
+//                int j = 0;
+                
+                for (int i = 0; i < dimension; ++i)
+                {
+                    // if maximise objective, find minimum value of obj
+                    if (population->at(0)->isMinimiseOrMaximise(i) == MAXIMISATION)
+                    {
+                        ref_point[i] = std::numeric_limits<double>::max();
+                    }
+                    
+                    // in minimise objecttive, find max value of obj
+                    if (population->at(0)->isMinimiseOrMaximise(i) == MINIMISATION)
+                    {
+                        ref_point[i] = std::numeric_limits<double>::min();
+                    }
+                }
+                
+                BOOST_FOREACH(IndividualSPtr ind, first_front)
+                {
+                    for (int i = 0; i < dimension; ++i)
+                    {
+                        // if maximise objective, find minimum value of obj
+                        if ((ind->isMinimiseOrMaximise(i) == MAXIMISATION) && (ind->getObjective(i) < ref_point[i]))
+                        {
+                            ref_point[i] = ind->getObjective(i);
+                        }
+                        
+                        // in minimise objecttive, find max value of obj
+                        if ((ind->isMinimiseOrMaximise(i) == MINIMISATION)  && (ind->getObjective(i) > ref_point[i]))
+                        {
+                            ref_point[i] = ind->getObjective(i);
+                        }
+                    }
+                }
+                
+                calc_ref_first_gen = false;
+                axis_lengths = std::vector<double>(ref_point.size(), 0.0);
+                ref_point_array = new double[dimension];
+                for (int var = 0; var < ref_point.size(); ++var)
+                {
+                    ref_point_array[var] = 0;
+                }
+            }
+        }
+        
+        
         ++generation;
 
 
@@ -184,12 +354,15 @@ public:
             if (do_log > OFF) log_stream.get() << "Hypervolume: " << volume << "\n";
             hypervolume_log.insert(std::make_pair(generation, volume));
 
-            boost::filesystem::path save_file = log_path / ("hypervolume.xml");
-            std::ofstream ofs(save_file.c_str());
-            assert(ofs.good());
-            boost::archive::xml_oarchive oa(ofs);
-            oa << boost::serialization::make_nvp("hypervolume", *this);
-            ofs.close();
+            if (do_log > OFF)
+            {
+                boost::filesystem::path save_file = save_dir / ("hypervolume.xml");
+                std::ofstream ofs(save_file.c_str());
+                assert(ofs.good());
+                boost::archive::xml_oarchive oa(ofs);
+                oa << boost::serialization::make_nvp("hypervolume", *this);
+                ofs.close();
+            }
 
             if (do_terminate == TERMINATION)
             {

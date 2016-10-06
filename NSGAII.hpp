@@ -118,6 +118,12 @@ public:
         return (mutation.getRealMutationOperator());
     }
     
+    MutationBase &
+    getIntMutationOperator()
+    {
+        return (mutation.getIntMutationOperator());
+    }
+    
     PopulationSPtr
     operator()(PopulationSPtr parents)
     {

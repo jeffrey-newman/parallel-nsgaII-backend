@@ -13,6 +13,11 @@ public:
 
     virtual double
     getVal() = 0;
+    
+    virtual ~MetricBase()
+    {
+        
+    }
 
 };
 

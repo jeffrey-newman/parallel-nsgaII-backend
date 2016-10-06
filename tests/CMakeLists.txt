@@ -240,3 +240,38 @@ SET(TestIndiSerialisatn
 ADD_EXECUTABLE(TestIndSerltn ${TestIndiSerialisatn})
 target_link_libraries(TestIndSerltn ${Boost_LIBRARIES})
 set_property(TARGET TestIndSerltn PROPERTY CXX_STANDARD 11)
+
+
+
+SET(TestIntMinSerialSources
+TestIntMinSerial.cpp
+)
+
+ADD_EXECUTABLE(TestSerialIntMin ${TestIntMinSerialSources}  ${AllSourcesT})
+
+IF(USE_VTK)
+if(VTK_LIBRARIES)
+target_link_libraries(TestSerialIntMin ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+else()
+target_link_libraries(TestSerialIntMin vtkHybrid vtkWidgets ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+ELSE()
+target_link_libraries(TestSerialIntMin ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+ENDIF()
+
+
+SET(TestIntMinParallelSources
+TestIntMinParallel.cpp
+)
+
+ADD_EXECUTABLE(TestParallelIntMin ${TestIntMinParallelSources}  ${AllSourcesT})
+
+IF(USE_VTK)
+if(VTK_LIBRARIES)
+target_link_libraries(TestParallelIntMin ${VTK_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+else()
+target_link_libraries(TestParallelIntMin vtkHybrid vtkWidgets ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+ELSE()
+target_link_libraries(TestParallelIntMin ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+ENDIF()
