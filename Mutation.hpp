@@ -164,7 +164,7 @@ public:
             if (mut_uniform(random_number_gen) <= this->probability_mutation)
             {
                 
-                std::uniform_int_distribution<double> distribution(individual.getIntLowerBound(j),individual.getIntUpperBound(j));
+                std::uniform_int_distribution<int> distribution(individual.getIntLowerBound(j),individual.getIntUpperBound(j));
                 
                 individual.setIntDV(j, distribution(random_number_gen));
                 
