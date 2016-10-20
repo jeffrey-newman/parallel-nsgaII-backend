@@ -84,9 +84,9 @@ public:
 //    }
 
     void
-    add_checkpoint(CheckpointBase & chkpnt_2_add)
+    add_checkpoint(CheckpointBaseSPtr chkpnt_2_add)
     {
-        my_checkpoints.addCheckpoint(&chkpnt_2_add);
+        my_checkpoints.addCheckpoint(chkpnt_2_add);
     }
 
     void

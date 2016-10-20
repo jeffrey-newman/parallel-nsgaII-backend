@@ -21,4 +21,6 @@ public:
 
 };
 
+typedef boost::shared_ptr<MetricBase> MetricBaseSPtr;
+
 #endif // METRICBASE_HPP

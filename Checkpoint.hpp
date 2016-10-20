@@ -12,6 +12,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/serialization/assume_abstract.hpp>
+#include <boost/shared_ptr.hpp>
 
 
 class CheckpointBase
@@ -21,6 +22,8 @@ public:
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT( CheckpointBase )
+
+typedef boost::shared_ptr<CheckpointBase> CheckpointBaseSPtr;
 
 class DummyCheckpoint : public CheckpointBase
 {
@@ -35,7 +38,7 @@ public:
 class Checkpoints
 {
 private:
-    std::vector<CheckpointBase *> my_checkpoints;
+    std::vector<CheckpointBaseSPtr> my_checkpoints;
 //    std::vector<CheckpointBase &> my_checkpoints;
 
 public:
@@ -45,7 +48,7 @@ public:
     }
 
     void
-    addCheckpoint(CheckpointBase * checkpoint_2_add)
+    addCheckpoint(CheckpointBaseSPtr checkpoint_2_add)
     {
         my_checkpoints.push_back(checkpoint_2_add);
     }
@@ -54,7 +57,7 @@ public:
     operator()(PopulationSPtr population)
     {
         bool do_continue = true;
-        BOOST_FOREACH(CheckpointBase * chckpnt, my_checkpoints)
+        BOOST_FOREACH(CheckpointBaseSPtr chckpnt, my_checkpoints)
         {
             do_continue = (do_continue && chckpnt->operator ()(population));
         }

@@ -237,7 +237,7 @@ public:
                 dataNumber = first_front.size();
                 dimension = population->at(0)->numberOfObjectives();
                 
-                
+                ref_point.resize(dimension,0);
 //                double* data = new double[dataNumber * dimension];
 //                int j = 0;
                 

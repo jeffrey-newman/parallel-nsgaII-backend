@@ -3,6 +3,7 @@
 
 #include "../Population.hpp"
 #include "../Checkpoint.hpp"
+#include "Metrics/MetricBase.hpp"
 
 #ifdef WITH_VTK
 #include <vtkVersion.h>
@@ -27,10 +28,10 @@ private:
     vtkSmartPointer<vtkContextView> view;
     vtkSmartPointer<vtkChartXY> chart;
     int num_gens;
-    MetricBase & metric;
+    MetricBaseSPtr metric;
 
 public:
-    MetricLinePlot(MetricBase & _metric) :
+    MetricLinePlot(MetricBaseSPtr _metric) :
         table(vtkSmartPointer<vtkTable>::New()),
         arrX(vtkSmartPointer<vtkFloatArray>::New()),
         arrM(vtkSmartPointer<vtkFloatArray>::New()),
@@ -61,7 +62,7 @@ public:
 
         vtkIdType row_num = table->InsertNextBlankRow();
         table->SetValue(row_num, 0, num_gens);
-        table->SetValue(row_num, 1, metric.getVal());
+        table->SetValue(row_num, 1, metric->getVal());
 
         if (table->GetNumberOfRows() > 2)
         {
@@ -91,11 +92,11 @@ public:
 class MetricLinePlot : public CheckpointBase
 {
 private:
-    MetricBase & metric;
+    MetricBaseSPtr metric;
 
 public:
 
-    MetricLinePlot(MetricBase & _metric) :
+    MetricLinePlot(MetricBaseSPtr _metric) :
         metric(_metric)
     {
 
