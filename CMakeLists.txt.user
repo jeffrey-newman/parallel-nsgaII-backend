@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.0.2, 2016-09-21T12:55:18. -->
+<!-- Written by QtCreator 4.0.2, 2016-09-28T10:49:17. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -62,7 +62,7 @@
    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Desktop Qt 5.7.0 GCC 64bit</value>
    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Desktop Qt 5.7.0 GCC 64bit</value>
    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">qt.57.gcc_64_kit</value>
-   <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">2</value>
+   <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">1</value>
    <value type="int" key="ProjectExplorer.Target.ActiveDeployConfiguration">0</value>
    <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">5</value>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.BuildConfiguration.0">
@@ -347,7 +347,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestParallelEval</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestParallelEval</value>
@@ -403,7 +403,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">DebsSBXTester</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">DebsSBXTester</value>
@@ -459,7 +459,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestDebsCrowding</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestDebsCrowding</value>
@@ -515,7 +515,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">FonTEstProblem</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">FonTEstProblem</value>
@@ -571,7 +571,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestFON</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestFON</value>
@@ -627,7 +627,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestParallelFON</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestParallelFON</value>
@@ -683,7 +683,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestParallelSpeedup</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestParallelSpeedup</value>
@@ -739,7 +739,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">DevsPolynomialMutationTester</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">DevsPolynomialMutationTester</value>
@@ -795,7 +795,7 @@
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguation.Title">TestIndSerltn</value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.Arguments"></value>
     <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory"></value>
-    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Release/tests</value>
+    <value type="QString" key="CMakeProjectManager.CMakeRunConfiguration.UserWorkingDirectory.default">/home/a1091793/Documents/Projects/Parallel-NSGAII-backend/build-parallel-nsgaII-backend-Desktop_Qt_5_7_0_GCC_64bit-Debug/tests</value>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">TestIndSerltn</value>

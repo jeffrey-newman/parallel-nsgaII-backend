@@ -101,7 +101,8 @@ public:
         return (front_sets);
     }
     
-    Population::Population(int population_size, ProblemDefinitionsSPtr defs)
+    Population::Population(int population_size, ProblemDefinitionsSPtr defs):
+            valid_obj_and_constraints(false), valid_fronts(false)
     {
         this->reserve(population_size);
         for (int i = 0; i < population_size; ++i)
