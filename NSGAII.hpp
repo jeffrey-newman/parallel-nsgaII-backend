@@ -135,7 +135,7 @@ public:
 
         PopulationSPtr children( (Population *) NULL);
         pop_eval(parents);
-        pop_eval(parents);
+//        pop_eval(parents);
 
         int no_gens = 0;
 

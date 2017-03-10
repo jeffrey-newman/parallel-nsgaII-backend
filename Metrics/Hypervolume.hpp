@@ -47,6 +47,7 @@ private:
     int max_gens_no_improvement;
     double best_hypervolume;
     Log do_log;
+    std::ofstream logging_file;
     std::reference_wrapper<std::ostream> log_stream;
     bool unitize;
     Better is_maximize_hvol;
@@ -126,7 +127,7 @@ public:
             save_dir = _save_dir.get();
             std::string filename = "logHypervolume_" + boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) + ".log";
             boost::filesystem::path logfile =  save_dir / filename;
-            std::ofstream logging_file;
+
             logging_file.open(logfile.c_str(), std::ios_base::app);
             if (!logging_file.is_open())
             {
@@ -143,6 +144,8 @@ public:
         {
             do_log = OFF;
         }
+
+//        if (do_log > OFF) log_stream.get() << "Hello Hypervolume\n";
         
         
         if (max_gens_no_improvement / gen_frequency < 3)
@@ -310,7 +313,8 @@ public:
                 BOOST_FOREACH(IndividualSPtr ind, first_front)
                 {
 
-                    if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << (j/2) << ": ";
+//                    if (do_log > OFF) log_stream.get() << "Hello Hypervolume again\n";
+                    if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << j << ": ";
                     for (int i = 0; i < ind->numberOfObjectives(); ++i)
                     {
                         if (do_log > OFF) log_stream.get() << ind->getObjective(i) << " -> ";
