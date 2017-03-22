@@ -56,17 +56,17 @@ int main(int argc, char* argv[])
     // The optimiser
     int max_gen = 10;
     NSGAII<RNG> optimiser(rng, test_problem);
-    MaxGenCheckpoint max_gen_terminate(max_gen);
+    boost::shared_ptr<MaxGenCheckpoint> max_gen_terminate(new MaxGenCheckpoint( max_gen));
 //    SavePopCheckpoint save_pop(1, working_dir);
     std::vector<double> ref_point = {1, -1};
-    Hypervolume hvol(ref_point, working_dir, 1, Hypervolume::TERMINATION, 50);
+    boost::shared_ptr<Hypervolume> hvol(new Hypervolume(1, working_dir, Hypervolume::TERMINATION, 50, ref_point));
 //    hvol.log();
     std::string mail_subj("Hypervolume of front from FON optimiser ");
 //    MailCheckpoint mail(10, hvol, mail_subj);
 //    std::string my_address("jeff@jeffandkat.id.au");
 //    mail.addAddress(my_address);
-    MetricLinePlot hvol_plot(hvol);
-    PlotFrontVTK plotfront;
+    boost::shared_ptr<MetricLinePlot> hvol_plot(new MetricLinePlot(hvol));
+    boost::shared_ptr<PlotFrontVTK> plotfront(new PlotFrontVTK);
 //    ResetMutXvrDebugFlags reset_flags;
 //    SerialiseCheckpoint<NSGAII<RNG> > save_state(1, optimiser, working_dir);
     optimiser.add_checkpoint(max_gen_terminate);

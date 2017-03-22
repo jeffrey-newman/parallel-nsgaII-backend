@@ -7,7 +7,7 @@
 #include <boost/serialization/vector.hpp>
 #include "../Checkpoint.hpp"
 #include "../Population.hpp"
-#include "Metrics/MetricBase.hpp"
+#include "../Metrics/MetricBase.hpp"
 
 class MailCheckpoint : public CheckpointBase
 {

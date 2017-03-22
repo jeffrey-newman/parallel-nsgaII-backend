@@ -39,7 +39,7 @@ public:
     void
     setMutationInverseDVSize(IndividualSPtr _ind_sample)
     {
-        this->setMutationProbability(1 / double(_ind_sample->numberOfIntDecisionVariables()));
+        this->setMutationProbability(1 / double(_ind_sample->numberOfIntDecisionVariables() + _ind_sample->numberOfRealDecisionVariables()));
     }
 };
 

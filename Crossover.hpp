@@ -211,7 +211,7 @@ class CombinedRealIntCrossover
     CrossoverBase & real_xover;
     CrossoverBase & int_xover;
     
-    
+
 public:
     
     CombinedRealIntCrossover(RNG & rng = default_rng_crossover, double & _probability_crossover = default_crossoverp, CrossoverBase & _real_xover = default_real_xover, CrossoverBase & _int_xover = default_int_xover) :

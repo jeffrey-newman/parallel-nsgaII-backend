@@ -69,6 +69,43 @@ public:
 
 };
 
+namespace{
+
+
+    inline std::ostream& operator << (std::ostream& os, const std::pair<std::vector<double>, std::vector<int> >& v)
+    {
+        os << "[";
+        for (std::vector<double>::const_iterator ii = v.first.begin(); ii != v.first.end(); ++ii)
+        {
+            os << " " << *ii;
+        }
+        for (std::vector<int>::const_iterator ii = v.second.begin(); ii != v.second.end(); ++ii)
+        {
+            os << " " << *ii;
+        }
+        os << " ]";
+        return os;
+    }
+
+
+    inline std::ostream& operator << (std::ostream& os, const std::pair<std::vector<double>, std::vector<double> >& v)
+    {
+        os << "[";
+        for (std::vector<double>::const_iterator ii = v.first.begin(); ii != v.first.end(); ++ii)
+        {
+            os << " " << *ii;
+        }
+        for (std::vector<double>::const_iterator ii = v.second.begin(); ii != v.second.end(); ++ii)
+        {
+            os << " " << *ii;
+        }
+        os << " ]";
+        return os;
+    }
+
+}
+
+
 
 class ParallelEvaluatePopServer : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
@@ -124,14 +161,16 @@ public:
         
         int individual = 0;
         std::vector<boost::mpi::request> reqs_out(number_clients);
+        if (do_log > OFF) log_stream.get() << "Evaluating population using " << number_clients << std::endl;
         int num_initial_jobs = number_clients;
         if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
         for (; individual < num_initial_jobs; ++individual)
         {
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " << "Evaluating individual " << individual << std::endl;
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars << std::endl;
             world.send(client_id, individual, dv_c);
         }
 //        mpi::wait_all(reqs_out.begin(), reqs_out.end());
@@ -139,13 +178,13 @@ public:
         while (individual < population->populationSize())
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
             
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars << std::endl;
             world.send(s.source(), individual, dv_c);
 
             ++individual;
@@ -154,7 +193,7 @@ public:
         for (int i = 0; i < number_clients; ++i)
         {
             boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
             (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
             (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
 
@@ -193,7 +232,7 @@ public:
         {
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " waiting to receive" << std::endl;
             boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars << " for individual " << s.tag() << std::endl;
             if (s.tag() == max_tag)
             {
                 do_continue = false;
@@ -203,12 +242,17 @@ public:
             {
                 //calc objective
                 objs_and_constraints = eval(decision_vars.first, decision_vars.second);
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints << " for individual " << s.tag() << std::endl;
                 world.send(0, s.tag(), oc_c);
             }
         }
     }
 };
+
+
+
+
+
 
 class ParallelEvaluatePopServerNonBlocking : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
@@ -276,7 +320,7 @@ public:
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1;
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars << std::endl;
             jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
         }
 
@@ -288,7 +332,7 @@ public:
             decision_vars.first = (*population)[individual]->getRealDVVector();
             decision_vars.second = (*population)[individual]->getIntDVVector();
             int client_id = individual + 1 - num_initial_jobs;
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars << std::endl;
             jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
             ++individual;
         }
@@ -323,7 +367,7 @@ public:
             else
             {
                 s = osr.get();
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
                 (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
                 (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
                 boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
@@ -337,7 +381,7 @@ public:
                 // Send out new job.
                 decision_vars.first = (*population)[individual]->getRealDVVector();
                 decision_vars.second = (*population)[individual]->getIntDVVector();
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first[0] << " " << decision_vars.first[1] << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars << std::endl;
                 jobs_running.insert(std::make_pair(individual, world.isend(s.source(), individual, dv_c)));
 
                 ++individual;
@@ -381,7 +425,7 @@ public:
             else
             {
                 boost::mpi::status s = os.get();
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints.first.at(0) << " " << objs_and_constraints.first.at(1) << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
                 (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
                 (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
                 boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
@@ -443,7 +487,7 @@ public:
         {
             if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " waiting to receive" << std::endl;
             boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars.first[0] << " " << decision_vars.first[1] << " for individual " << s.tag() << std::endl;
+            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received " << decision_vars << " for individual " << s.tag() << std::endl;
             if (s.tag() == max_tag)
             {
                 do_continue = false;
@@ -453,7 +497,7 @@ public:
             {
                 //calc objective
                 objs_and_constraints = eval(decision_vars.first, decision_vars.second);
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints.first[0] << " " << objs_and_constraints.first[1] << " for individual " << s.tag() << std::endl;
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending " << objs_and_constraints << " for individual " << s.tag() << std::endl;
                 if(!first_time)
                 {
                     rq.wait();

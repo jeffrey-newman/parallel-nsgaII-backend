@@ -14,6 +14,10 @@ ENDIF()
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
+set(CMAKE_AUTOMOC ON)
+find_package(Qt5GUI)
+find_package(Qt5Charts)
+find_package(Qt5Widgets)
 
 SET(USE_STATIC_BOOST CACHE BOOL "Set to on to use static boost libraries")
 IF (USE_STATIC_BOOST)
@@ -21,7 +25,7 @@ IF (USE_STATIC_BOOST)
     SET(Boost_USE_STATIC_RUNTIME ON)
 ENDIF()
 
-FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono serialization)
+FIND_PACKAGE(Boost REQUIRED COMPONENTS filesystem system program_options mpi serialization timer chrono serialization date_time)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
 add_definitions(-DVARIANT=4)

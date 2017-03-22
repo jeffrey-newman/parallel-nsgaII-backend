@@ -1,20 +1,9 @@
 //
-//  DebsSBXCrossoverTester.cpp
-//  parallel-nsgaII-backend
-//
-//  Created by a1091793 on 20/11/2015.
-//  Copyright © 2015 University of Adelaide. All rights reserved.
+// Created by a1091793 on 10/3/17.
 //
 
+#include "../Mutation.hpp"
 
-
-// Test to get replication of figure in Deb's article "Self-Adaptation in Real-Parameter Genetic Algorithms with Simulated Binary Crossover" through montecarlo sampling
-
-
-
-#include <stdio.h>
-#include <random>
-#include <string>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMainWindow>
 #include <QtCharts/QChartView>
@@ -23,59 +12,59 @@
 #include <QtCharts/QLegend>
 #include <QtCharts/QBarCategoryAxis>
 
-
 QT_CHARTS_USE_NAMESPACE
 
-
-
-#include "../Mutation.hpp"
-
-int main(int argc, char* argv[])
+int
+main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
 
-    typedef double DecisionVariable_t;
     typedef std::mt19937 RNG_t;
     unsigned int seed = 1;
     double eta = 10;
     double mutation_probability = 1.0;
     RNG_t rng(seed);
-    
-    DebsPolynomialMutation<RNG_t> mutation_tester(rng, eta, mutation_probability);
-    
+
+    UniformIntMutation<RNG_t> mutation_tester(rng, mutation_probability);
+
     int number_dvs = 1; //number of decision variables
-    double min_value = -1.0;
-    double max_value = 8.0;
-    std::vector<DecisionVariable_t> lower_bounds(number_dvs, min_value);
-    std::vector<DecisionVariable_t> upper_bounds(number_dvs, max_value);
-    std::vector<int> lower_bounds_i;
-    std::vector<int> upper_bounds_i;
+    int min_value = -1.0;
+    int max_value = 8.0;
+    std::vector<int> lower_bounds(number_dvs, min_value);
+    std::vector<int> upper_bounds(number_dvs, max_value);
+    std::vector<double> lower_bounds_d;
+    std::vector<double> upper_bounds_d;
     std::vector<MinOrMaxType> min_or_max(1, MINIMISATION);
-    ProblemDefinitionsSPtr defs(new ProblemDefinitions(lower_bounds, upper_bounds,lower_bounds_i, upper_bounds_i, min_or_max, 0));
+    ProblemDefinitionsSPtr defs(new ProblemDefinitions(lower_bounds_d, upper_bounds_d,lower_bounds, upper_bounds, min_or_max, 0));
     //    std::vector<DecisionVariable_t> parent1_dv_values {2};
     //    std::vector<DecisionVariable_t> parent2_dv_values {5};
     Individual ind1(defs);
 
-    
+//    std::vector<QBarSet> chart_data;
+//    for(int i = min_value; i <= max_value; i++)
+//    {
+//        chart_data.push_back(QBarSet(std::to_string(i)));
+//    }
+
+
     QBarSet *set = new QBarSet("Frequency Counts");
     std::vector<int> counts(max_value-min_value);
-//    std::vector<double> dv_vals_sample;
-    
-    int num_samples = 1000000;
+
+    int num_samples = 20;
     for (int i = 0; i < num_samples; ++i)
     {
         Individual muted1(ind1);
         mutation_tester.operator()(muted1);
-        counts[int(muted1.getRealDV(0))-min_value]++;
+        counts[muted1.getIntDV(0)-min_value]++;
 //        results.push_back(muted1.getRealDV(0));
         //        std::cout << child1[0] << std::endl;
         //        std::cout << child2[0] << std::endl;
     }
 
     BOOST_FOREACH(int count, counts)
-    {
-        *set << count;
-    }
+                {
+                    *set << count;
+                }
 
     QBarSeries * series = new QBarSeries();
     series->append(set);
@@ -105,5 +94,7 @@ int main(int argc, char* argv[])
     window.setCentralWidget(chartView);
     window.resize(420, 300);
     window.show();
-    
+
+    return a.exec();
+
 }

@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
         // The optimiser
         int max_gen = 10;
         NSGAII<RNG> optimiser(rng, eval_server);
-        MaxGenCheckpoint max_gen_stop(max_gen);
+        boost::shared_ptr<MaxGenCheckpoint> max_gen_stop(new MaxGenCheckpoint(max_gen));
         optimiser.add_checkpoint(max_gen_stop);
 
 //        optimiser.visualise();

@@ -3,7 +3,7 @@
 
 #include "../Population.hpp"
 #include "../Checkpoint.hpp"
-#include "Metrics/MetricBase.hpp"
+#include "../Metrics/MetricBase.hpp"
 
 #ifdef WITH_VTK
 #include <vtkVersion.h>

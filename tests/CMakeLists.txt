@@ -88,7 +88,7 @@ IF(USE_VTK)
           target_link_libraries(DevsPolynomialMutationTester vtkHybrid vtkWidgets ${Boost_LIBRARIES})
         endif()
 ELSE()
-        target_link_libraries(DevsPolynomialMutationTester ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+        target_link_libraries(DevsPolynomialMutationTester ${MPI_LIBRARIES} ${Boost_LIBRARIES} Qt5::Widgets Qt5::Gui Qt5::Charts)
 ENDIF()
 	
 set_property(TARGET DevsPolynomialMutationTester PROPERTY CXX_STANDARD 11)
@@ -275,3 +275,11 @@ endif()
 ELSE()
 target_link_libraries(TestParallelIntMin ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 ENDIF()
+
+SET(TestIntUniformMutationSources
+        TestUniformIntMutation.cpp)
+
+# Instruct CMake to run moc automatically when needed.
+ADD_EXECUTABLE(TestUniformIntMutation ${TestIntUniformMutationSources} ${AllSourcesT})
+target_link_libraries(TestUniformIntMutation Qt5::Widgets Qt5::Gui Qt5::Charts  ${Boost_LIBRARIES})
+
