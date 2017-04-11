@@ -168,19 +168,14 @@ public:
         
         // To the right of location, the chromosones are crossovered.
         
-        for (int j=0;j < individal_1.numberOfIntDecisionVariables(); ++j)
+        for (int j=location;j < individal_1.numberOfIntDecisionVariables(); ++j)
         {//for each real in chrom
             
-//            if (j <= location) // no crossover
-//            {
-//                // Do nothing. Leave each chromosone as it is
-//            }
-            if (j > location)
-            {
+//
                 int val = individal_1.getIntDV(j);
                 individal_1.setIntDV(j, individal_2.getIntDV(j));
                 individal_2.setIntDV(j, val);                
-            }
+
         }
         
     }

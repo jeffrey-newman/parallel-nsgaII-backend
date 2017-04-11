@@ -43,6 +43,7 @@ SET(BackendSources
 	parallel_nsgaII_backend.hpp
 	parallel_nsgaII_backendPriv.hpp
 	Population.hpp
+		Population.cpp
 	Types.hpp
 	)
 

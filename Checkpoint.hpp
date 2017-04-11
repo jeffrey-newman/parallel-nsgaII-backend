@@ -13,6 +13,7 @@
 #include <boost/foreach.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 #include <boost/shared_ptr.hpp>
+#include "Population.hpp"
 
 
 class CheckpointBase

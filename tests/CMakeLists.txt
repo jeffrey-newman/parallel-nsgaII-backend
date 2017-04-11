@@ -1,3 +1,6 @@
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
+
 SET(BackendSourcesT
         ../Checkpoint.hpp
 
@@ -283,3 +286,16 @@ SET(TestIntUniformMutationSources
 ADD_EXECUTABLE(TestUniformIntMutation ${TestIntUniformMutationSources} ${AllSourcesT})
 target_link_libraries(TestUniformIntMutation Qt5::Widgets Qt5::Gui Qt5::Charts  ${Boost_LIBRARIES})
 
+SET(TestIntCrossoverSources
+        TestIntCrossover.cpp)
+
+# Instruct CMake to run moc automatically when needed.
+ADD_EXECUTABLE(TestIntCrossover ${TestIntCrossoverSources} ${AllSourcesT})
+target_link_libraries(TestIntCrossover Qt5::Widgets Qt5::Gui Qt5::Charts  ${Boost_LIBRARIES})
+
+SET(TestIntCrossAndMutSources
+        TestIntMutAndCross.cpp)
+
+# Instruct CMake to run moc automatically when needed.
+ADD_EXECUTABLE(TestIntMutAndCross ${TestIntCrossAndMutSources} ${AllSourcesT})
+target_link_libraries(TestIntMutAndCross Qt5::Widgets Qt5::Gui Qt5::Charts  ${Boost_LIBRARIES})

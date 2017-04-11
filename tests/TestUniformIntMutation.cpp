@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     QBarSet *set = new QBarSet("Frequency Counts");
     std::vector<int> counts(max_value-min_value);
 
-    int num_samples = 20;
+    int num_samples = 100;
     for (int i = 0; i < num_samples; ++i)
     {
         Individual muted1(ind1);
