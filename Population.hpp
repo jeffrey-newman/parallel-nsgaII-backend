@@ -37,6 +37,8 @@ public:
 
     Population(int population_size, ProblemDefinitionsSPtr defs);
 
+    Population(boost::filesystem::path file, ProblemDefinitionsSPtr defs);
+
     void append(const Population & appending_pop);
 
     const unsigned long populationSize() const;
@@ -122,6 +124,31 @@ Population::Population(int population_size, ProblemDefinitionsSPtr defs):
     for (int i = 0; i < population_size; ++i)
     {
         std::vector<IndividualSPtr>::push_back(IndividualSPtr(new Individual(defs)));
+    }
+}
+
+Population::Population(boost::filesystem::path file, ProblemDefinitionsSPtr defs):
+        valid_obj_and_constraints(false), valid_fronts(false)
+{
+    if (!boost::filesystem::exists(file))
+    {
+        std::cerr << "Cannot construct pop from " << file << "; File does not exisit\n";
+    }
+    else
+    {
+        std::ifstream fs(file.string().c_str());
+        if (fs.is_open())
+        {
+            std::string line;
+
+            while (std::getline(fs, line)) {
+                std::vector<IndividualSPtr>::push_back(IndividualSPtr(new Individual(line, defs)));
+            }
+        }
+        else
+        {
+            std::cerr << "Cannot construct pop from " << file << "; File could not be openned\n";
+        }
     }
 }
 

@@ -15,6 +15,11 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/foreach.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/home/support/common_terminals.hpp>
 
 class Individual
 {
@@ -70,6 +75,58 @@ public:
     : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
+    }
+
+    Individual(std::string & s, ProblemDefinitionsSPtr defs)
+            : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
+    {
+        //Format of population seeding file:
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+
+        namespace qi = boost::spirit::qi;
+        namespace ph = boost::phoenix;
+
+        qi::rule<std::string::iterator, std::vector<int>(), qi::space_type> int_vec_parser = *qi::int_;
+        qi::rule<std::string::iterator, std::vector<double>(), qi::space_type> real_vec_parser = *qi::double_;
+        qi::rule<std::string::iterator,  qi::space_type> ind_parser = qi::lit('[')
+                                                        >> int_vec_parser[ph::ref(this->int_decision_variables) = qi::_1]
+                                                        >> qi::lit(';')
+                                                        >> real_vec_parser[ph::ref(this->real_decision_variables) = qi::_1]
+                                                        >> qi::lit(']')
+                                                        >> qi::lit("->")
+                                                        >> qi::lit('(')
+                                                        >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
+                                                        >> qi::lit(';')
+                                                        >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
+                                                        >> qi::lit(')');
+        ind_parser.name("individual_parser");
+//        qi::debug(ind_parser);
+        std::string::iterator it = s.begin();
+        std::string::iterator end = s.end();
+        bool r = boost::spirit::qi::phrase_parse(it, end, ind_parser, qi::space);
+        if (!(r && it == end))
+        {
+            std::string rest(it, end);
+            std::cout << "-------------------------\n";
+            std::cout << "Parsing failed\n";
+            std::cout << "stopped at: \"" << rest << "\"\n";
+            std::cout << "-------------------------\n";
+        }
+
+        if (this->real_decision_variables.size() < this->numberOfRealDecisionVariables()) this->real_decision_variables.resize(this->numberOfRealDecisionVariables());
+        if (this->int_decision_variables.size() < this->numberOfIntDecisionVariables()) this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
+        if (this->objectives.size() < this->numberOfObjectives()) this->objectives.resize(this->numberOfObjectives());
+        if (this->constraints.size() < this->numberOfConstraints()) this->constraints.resize(this->numberOfConstraints());
     }
 
     Individual()
@@ -237,22 +294,22 @@ public:
     
     const unsigned long numberOfRealDecisionVariables() const
     {
-        return (real_decision_variables.size());
+        return (definitions->real_lowerbounds.size());
     }
     
     const unsigned long numberOfIntDecisionVariables() const
     {
-        return (int_decision_variables.size());
+        return (definitions->int_lowerbounds.size());
     }
     
     const unsigned long numberOfObjectives() const
     {
-        return (objectives.size());
+        return (definitions->minimise_or_maximise.size());
     }
     
     const unsigned long numberOfConstraints() const
     {
-        return (constraints.size());
+        return (definitions->number_constraints);
     }
 
     friend class boost::serialization::access;
@@ -311,6 +368,9 @@ std::ostream& operator<<(std::ostream& os, const Individual & ind)
 //    if (ind.parent) os << "\tFrom_Parent" << std::endl;
     return os;
 }
+
+
+
 
 
 
