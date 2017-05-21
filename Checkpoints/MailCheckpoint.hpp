@@ -8,6 +8,9 @@
 #include "../Checkpoint.hpp"
 #include "../Population.hpp"
 #include "../Metrics/MetricBase.hpp"
+#include <boost/filesystem.hpp>
+#include <fstream>
+#include <iostream>
 
 class MailCheckpoint : public CheckpointBase
 {
@@ -17,12 +20,24 @@ class MailCheckpoint : public CheckpointBase
     std::vector<std::string> addresses;
     MetricBaseSPtr metric;
     std::string disp_name;
+    boost::filesystem::path loggingfile;
+    std::ofstream logging;
+    bool is_logging;
 
 public:
-    MailCheckpoint(int _gen_frequency, MetricBaseSPtr _metric, std::string _disp_name)
-    : gen_frequency(_gen_frequency), gen_number(0), metric(_metric), disp_name(_disp_name)
+    MailCheckpoint(int _gen_frequency, MetricBaseSPtr _metric, std::string _disp_name, boost::filesystem::path _loggingfile = "unspecified")
+    : gen_frequency(_gen_frequency), gen_number(0), metric(_metric), disp_name(_disp_name), loggingfile(_loggingfile), is_logging(false)
     {
+        if (loggingfile != "unspecified")
+        {
+            logging.open(loggingfile.string().c_str());
+            if (logging.is_open())
+            {
+                is_logging = true;
+                logging << "Mail Checkpoint log: mail every " << gen_frequency << " generations\n";
+            }
 
+        }
     }
 
     void
@@ -43,10 +58,14 @@ public:
             {
                 std::stringstream command;
                 command << command_start.str() << address << " < /dev/null";
-//                std::cout << command.str() << std::endl;
+                logging << gen_number << ": " << command.str() << "\n";
                 system(command.str().c_str());
 
             }
+        }
+        else
+        {
+            if(is_logging) logging << gen_number << ": No mail\n";
         }
         return true;
     }
