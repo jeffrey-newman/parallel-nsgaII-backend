@@ -43,7 +43,7 @@ public:
             {
                 std::stringstream command;
                 command << command_start.str() << address << " < /dev/null";
-                std::cout << command.str() << std::endl;
+//                std::cout << command.str() << std::endl;
                 system(command.str().c_str());
 
             }
