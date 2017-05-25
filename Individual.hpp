@@ -108,7 +108,9 @@ public:
                                                         >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
                                                         >> qi::lit(';')
                                                         >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
-                                                        >> qi::lit(')');
+                                                        >> qi::lit(')')
+                                                        - (qi::lit("Rank:") >> qi::int_[ph::ref(this->rank) = qi::_1])
+                                                        - (qi::lit("CrowdingDist:") >> qi::double_[ph::ref(this->crowding_score) = qi::_1]);
         ind_parser.name("individual_parser");
 //        qi::debug(ind_parser);
         std::string::iterator it = s.begin();
