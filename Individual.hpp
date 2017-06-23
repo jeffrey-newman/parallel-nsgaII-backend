@@ -331,13 +331,15 @@ public:
 //typedef Individual * IndividualPtr;
 typedef boost::shared_ptr<Individual> IndividualSPtr;
 
-std::ostream& operator<<(std::ostream& os, const IndividualSPtr ind)
+inline std::ostream&
+operator<<(std::ostream& os, const IndividualSPtr ind)
 {
     os << *ind;
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Individual & ind)
+inline std::ostream&
+operator<<(std::ostream& os, const Individual & ind)
 {
     os << "[ ";
 
