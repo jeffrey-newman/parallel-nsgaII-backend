@@ -12,20 +12,20 @@
 #include <algorithm>
 #include <chrono>
 #include <random>
-#include "Types.hpp"
 #include "Comparator.hpp"
-
-std::uniform_real_distribution<double> sel_uniform(0.0,1.0);
-unsigned seed_selection = std::chrono::system_clock::now().time_since_epoch().count();
-std::mt19937 default_rng_selection(seed_selection);
+#include "Population.hpp"
 
 
-template <typename RNG>
+template <typename RNG = std::mt19937>
 class TournamentSelection
 {
     
     
 private:
+    std::uniform_real_distribution<double> sel_uniform;
+    unsigned seed_selection;
+    RNG default_rng_selection;
+
     RNG & random_number_gen;
     
     
@@ -61,8 +61,22 @@ private:
     }
     
 public:
-    TournamentSelection(RNG & rng = default_rng_selection)
-    : random_number_gen(rng)
+    TournamentSelection()
+            :
+            sel_uniform(0.0,1.0),
+            seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
+            default_rng_selection(seed_selection),
+            random_number_gen(default_rng_selection)
+    {
+
+    }
+
+    TournamentSelection(RNG & rng)
+    :
+            sel_uniform(0.0,1.0),
+            seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
+            default_rng_selection(seed_selection),
+            random_number_gen(rng)
     {
         
     }

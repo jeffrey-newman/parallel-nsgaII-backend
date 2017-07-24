@@ -13,7 +13,6 @@
 #include <functional>
 
 #include <boost/scoped_ptr.hpp>
-#include "Types.hpp"
 #include "Selection.hpp"
 #include "Crossover.hpp"
 #include "Mutation.hpp"
@@ -37,7 +36,7 @@
 //enum Visualise{ON, OFF};
 
 
-template <typename RNG>
+template <typename RNG = std::mt19937>
 class NSGAII {
 public:
     enum Log{OFF, LVL1, LVL2, LVL3};
@@ -66,17 +65,17 @@ public:
     NSGAII(RNG & _random_number_generator, ObjectivesAndConstraintsBase & eval)
         : random_number_generator(_random_number_generator), default_evaluator(eval), pop_eval(default_evaluator), selection(_random_number_generator), /*do_visualise(OFF),*/ do_log(OFF), log_stream(std::cout)
     {
-        
+
     }
     
     NSGAII(RNG & _random_number_generator, EvaluatePopulationBase & _pop_eval)
     : random_number_generator(_random_number_generator), default_evaluator(dummy_eval), pop_eval(_pop_eval), selection(_random_number_generator), /*do_visualise(OFF),*/ do_log(OFF), log_stream(std::cout)
     {
-        
+
     }
     
 public:
-    
+
 //    void
 //    visualise(Visualise _val = ON)
 //    {
@@ -112,13 +111,13 @@ public:
         }
     }
 
-    MutationBase &
+    MutationBase<RNG> &
     getRealMutationOperator()
     {
         return (mutation.getRealMutationOperator());
     }
     
-    MutationBase &
+    MutationBase<RNG> &
     getIntMutationOperator()
     {
         return (mutation.getIntMutationOperator());
@@ -141,7 +140,7 @@ public:
 
 
 
-        do {            
+        do {
 
             if (is_fstream == true)
             {
@@ -174,9 +173,9 @@ public:
             parents = children;
 
         } while (my_checkpoints(children));
-        
+
         return (children);
-        
+
     }
 
     friend class boost::serialization::access;

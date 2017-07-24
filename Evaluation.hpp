@@ -12,7 +12,7 @@
 #include <tuple>
 #include <vector>
 #include <boost/foreach.hpp>
-#include "Types.hpp"
+#include "Population.hpp"
 
 
 class ObjectivesAndConstraintsBase

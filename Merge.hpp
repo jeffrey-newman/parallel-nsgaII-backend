@@ -9,7 +9,8 @@
 #ifndef Merge_h
 #define Merge_h
 
-#include "Types.hpp"
+#include "Population.hpp"
+#include "DebsCrowdingDistance.hpp"
                 
 
 class DistanceComparator
@@ -56,7 +57,7 @@ public:
         while (new_child_pop->populationSize() + (*front_sets)[i].size() <= previous_child_pop->populationSize())
         {
             // assign distances (needed for tournament selection)
-            DebsCrowdingDistance::calculate((*front_sets)[i]);
+            calculateDebsCrowdingDistance((*front_sets)[i]);
             BOOST_FOREACH(IndividualSPtr ind, (*front_sets)[i])
             {
                 new_child_pop->push_back(ind);
@@ -68,7 +69,7 @@ public:
         
         if (more_ind_need > 0)
         {
-            std::vector<std::pair<IndividualSPtr, double> > distances = DebsCrowdingDistance::calculate((*front_sets)[i]);
+            std::vector<std::pair<IndividualSPtr, double> > distances = calculateDebsCrowdingDistance((*front_sets)[i]);
             
             //sort by crowding distance in the next dominated set (sorts descendingly)
             DistanceComparator dist_comparator;

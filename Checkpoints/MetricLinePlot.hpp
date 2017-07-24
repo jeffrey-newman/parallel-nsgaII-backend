@@ -5,7 +5,8 @@
 #include "../Checkpoint.hpp"
 #include "../Metrics/MetricBase.hpp"
 
-#ifdef WITH_VTK
+
+#if defined(WITH_VTK)
 #include <vtkVersion.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
@@ -87,6 +88,7 @@ public:
         return true;
     }
 };
+
 
 #else
 class MetricLinePlot : public CheckpointBase
