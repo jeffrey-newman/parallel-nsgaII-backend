@@ -36,6 +36,13 @@ public:
     IndividualSPtr ind;
     std::vector<DominationInfo *> dominates;
     int dominated;
+
+    DominationInfo()
+            :
+            dominated(0)
+    {
+
+    }
 };
 
 inline FrontsSPtr
@@ -69,67 +76,115 @@ debNonDominatedSort(const Population & population_ref)
     const int P_DOMINATES = 1;
     const int Q_DOMINATES = 2;
 
+    for (int j = 0; j < population_set.size(); ++j)
+    {
+        DominationInfo & p = population_set[j];
+        IndividualSPtr p_ptr = p.ind;
+        int & p_dominated_by = p.dominated;
+        std::vector<DominationInfo *> & p_dominates = p.dominates;
+
+        for (int k = j+1; k < population_set.size(); ++k)
+        {
+
+            DominationInfo & q = population_set[k];
+            IndividualSPtr q_ptr = q.ind;
+            int & q_dominated_by = q.dominated;
+            std::vector<DominationInfo *> & q_dominates = q.dominates;
+
+            if (p_ptr != q_ptr)
+            {
+                //If p dominates q
+                int compare = Comparator::whichDominates(p_ptr,q_ptr);
+                if (compare == P_DOMINATES)
+                {
+                    p_dominates.push_back(&q);
+                    ++q_dominated_by;
+                }
+                else if (compare == Q_DOMINATES)
+                {
+                    q_dominates.push_back(&p);
+                    ++p_dominated_by;
+                }
+            }
+
+        }
+
+    }
+
+    int front_num = 0;
     BOOST_FOREACH(DominationInfo & p, population_set)
                 {
                     IndividualSPtr p_ptr = p.ind;
                     int & p_dominated_by = p.dominated;
-                    p_dominated_by = 0;
-                    std::vector<DominationInfo *> & p_dominates = p.dominates;
-
-                    BOOST_FOREACH(DominationInfo & q, population_set)
-                                {
-                                    IndividualSPtr q_ptr = q.ind;
-                                    if (p_ptr != q_ptr)
-                                    {
-                                        //If p dominates q
-                                        int compare = Comparator::whichDominates(p_ptr,q_ptr);
-                                        if (compare == P_DOMINATES)
-                                        {
-                                            p_dominates.push_back(&q);
-                                        }
-                                        else if (compare == Q_DOMINATES)
-                                        {
-                                            ++p_dominated_by;
-                                        }
-                                    }
-                                }
                     if (p_dominated_by == 0)
                     {
-                        front_sets[0].push_back(&p);
-                        (*fronts)[0].push_back(p_ptr);
-                        p_ptr->setRank(1);
-
+                        front_sets[front_num].push_back(&p);
+                        (*fronts)[front_num].push_back(p_ptr);
+                        p_ptr->setRank(front_num+1);
                     }
-
                 }
-
-    int i = 0;
 
     std::vector<DominationInfo * > dummy_front1;
     Population dummy_front2;
 
     //Could truncate this loop once the top pop_size are sorted.
-    while (front_sets[i].size() != 0)
+    while (front_sets[front_num].size() != 0)
     {
         front_sets.push_back(dummy_front1);
         fronts->push_back(dummy_front2);
-        BOOST_FOREACH(DominationInfo * p, front_sets[i])
+        BOOST_FOREACH(DominationInfo * p, front_sets[front_num])
                     {
                         BOOST_FOREACH(DominationInfo * q, p->dominates)
                                     {
 //                    std::cout << "from " << q->dominated;
-                                        q->dominated = (q->dominated - 1);
+                                        q->dominated = --(q->dominated);
 //                    std::cout << "to " << q->dominated << std::endl;
                                         if (q->dominated == 0)
                                         {
-                                            front_sets[i+1].push_back(q);
-                                            (*fronts)[i+1].push_back(q->ind);
-                                            q->ind->setRank(i+2);
+                                            front_sets[front_num+1].push_back(q);
+                                            (*fronts)[front_num+1].push_back(q->ind);
+                                            q->ind->setRank(front_num+2);
                                         }
                                     }
                     }
-        ++i;
+        ++front_num;
     }
+
+//    BOOST_FOREACH(DominationInfo & p, population_set)
+//                {
+//                    IndividualSPtr p_ptr = p.ind;
+//                    int & p_dominated_by = p.dominated;
+//                    p_dominated_by = 0;
+//                    std::vector<DominationInfo *> & p_dominates = p.dominates;
+//
+//                    BOOST_FOREACH(DominationInfo & q, population_set)
+//                                {
+//                                    IndividualSPtr q_ptr = q.ind;
+//                                    if (p_ptr != q_ptr)
+//                                    {
+//                                        //If p dominates q
+//                                        int compare = Comparator::whichDominates(p_ptr,q_ptr);
+//                                        if (compare == P_DOMINATES)
+//                                        {
+//                                            p_dominates.push_back(&q);
+//                                        }
+//                                        else if (compare == Q_DOMINATES)
+//                                        {
+//                                            ++p_dominated_by;
+//                                        }
+//                                    }
+//                                }
+//                    if (p_dominated_by == 0)
+//                    {
+//                        front_sets[0].push_back(&p);
+//                        (*fronts)[0].push_back(p_ptr);
+//                        p_ptr->setRank(1);
+//
+//                    }
+//
+//                }
+//
+//    int i = 0;
 
     if (fronts->back().size() == 0)
     {

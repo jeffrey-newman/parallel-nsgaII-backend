@@ -54,22 +54,43 @@ private:
 //    PlotFrontVTK plot_front2;
     DebsRankingAndCrowdingSelector merge_calc_front_and_dist;
 //    Visualise do_visualise;
-    PopulationSPtr pop;
+    PopulationSPtr parents;
+    PopulationSPtr children;
     Log do_log;
     bool is_fstream = false;
     std::reference_wrapper<std::ostream> log_stream;
     boost::filesystem::path f_path;
+    int gen_num;
+    bool is_finished;
     
 public:
 
     NSGAII(RNG & _random_number_generator, ObjectivesAndConstraintsBase & eval)
-        : random_number_generator(_random_number_generator), default_evaluator(eval), pop_eval(default_evaluator), selection(_random_number_generator), /*do_visualise(OFF),*/ do_log(OFF), log_stream(std::cout)
+        : random_number_generator(_random_number_generator),
+          default_evaluator(eval),
+          pop_eval(default_evaluator),
+          selection(_random_number_generator),
+            /*do_visualise(OFF),*/
+          parents( (Population *) NULL),
+          children( (Population *) NULL),
+          do_log(OFF),
+          log_stream(std::cout),
+          gen_num(0),
+          is_finished(false)
     {
 
     }
     
     NSGAII(RNG & _random_number_generator, EvaluatePopulationBase & _pop_eval)
-    : random_number_generator(_random_number_generator), default_evaluator(dummy_eval), pop_eval(_pop_eval), selection(_random_number_generator), /*do_visualise(OFF),*/ do_log(OFF), log_stream(std::cout)
+    : random_number_generator(_random_number_generator),
+      default_evaluator(dummy_eval),
+      pop_eval(_pop_eval),
+      selection(_random_number_generator),
+            /*do_visualise(OFF),*/
+      do_log(OFF),
+      log_stream(std::cout),
+      gen_num(0),
+      is_finished(false)
     {
 
     }
@@ -122,60 +143,50 @@ public:
     {
         return (mutation.getIntMutationOperator());
     }
-    
+
     PopulationSPtr
-    operator()(PopulationSPtr parents)
+    step()
     {
+        bool not_finished = this->step_impl();
+        if (!not_finished) this->is_finished = true;
+        return  (parents);
+    }
 
-//#ifdef WITH_VTK
-//        if (do_visualise == ON) PlotFrontVTK plot_front1;
-//#endif
+    PopulationSPtr
+    step(PopulationSPtr _initial_pop)
+    {
+        this->restart(_initial_pop);
+        return(this->step());
+    }
 
-
-        PopulationSPtr children( (Population *) NULL);
-        pop_eval(parents);
-//        pop_eval(parents);
-
-        int no_gens = 0;
-
-
-
+    PopulationSPtr
+    run()
+    {
         do {
 
-            if (is_fstream == true)
-            {
-                std::ofstream * fstreamPtr = dynamic_cast<std::ofstream *>(&(log_stream.get()));
-                fstreamPtr->close();
-                fstreamPtr->open(f_path.c_str(), std::ios_base::out | std::ios_base::trunc);
-                if (!fstreamPtr->is_open()) do_log = OFF;
-            }
-            if (do_log > OFF)  log_stream.get() << "Generation: " << ++no_gens << "\n";
-            if (do_log > OFF)  log_stream.get() << "parents: \n" << parents;
+        } while (this->step_impl());
+        this->is_finished = true;
+        return (parents);
+    }
 
-            children = selection(parents);
+    PopulationSPtr
+    run(PopulationSPtr _initial_pop)
+    {
+        this->restart(_initial_pop);
+        return(this->run());
 
-            if (do_log > OFF)  log_stream.get() << "\n\n\nAfter selection: \n" << children;
+    }
 
-            crossover(children);
+    void
+    initialisePop(PopulationSPtr _initial_pop)
+    {
+        this->restart(_initial_pop);
+    }
 
-            if (do_log > OFF)  log_stream.get() << "\n\n\nAfter crossover: \n" << children;
-
-            mutation(children);
-
-            if (do_log > OFF)  log_stream.get() << "\n\n\nAfter mutation: \n" << children;
-
-            pop_eval(children);
-
-            children = merge_calc_front_and_dist(parents, children);
-
-            if (do_log > OFF)  log_stream.get() << "After merge: \n" << children;
-
-            parents = children;
-
-        } while (my_checkpoints(children));
-
-        return (children);
-
+    bool
+    isFinished()
+    {
+        return (is_finished);
     }
 
     friend class boost::serialization::access;
@@ -187,8 +198,58 @@ public:
 //            ar & BOOST_SERIALIZATION_NVP(my_checkpoints);
             ar & BOOST_SERIALIZATION_NVP(max_gen);
 //            ar & BOOST_SERIALIZATION_NVP(do_visualise);
-            ar & BOOST_SERIALIZATION_NVP(pop);
+            ar & BOOST_SERIALIZATION_NVP(parents);
 
+    }
+
+private:
+
+    void
+    restart(PopulationSPtr _parents)
+    {
+        if (do_log > OFF)  log_stream.get() << "Restarting GA: \n";
+        gen_num = 0;
+        is_finished = false;
+        parents = _parents;
+        pop_eval(parents);
+        if (do_log > OFF)  log_stream.get() << "Initial population: \n" << parents;
+        parents->calcFronts();
+    }
+
+    bool
+    step_impl()
+    {
+        if (is_fstream == true)
+        {
+            std::ofstream * fstreamPtr = dynamic_cast<std::ofstream *>(&(log_stream.get()));
+            fstreamPtr->close();
+            fstreamPtr->open(f_path.c_str(), std::ios_base::out | std::ios_base::trunc);
+            if (!fstreamPtr->is_open()) do_log = OFF;
+        }
+        if (do_log > OFF)  log_stream.get() << "Generation: " << ++gen_num << "\n";
+        if (do_log > OFF)  log_stream.get() << "parents: \n" << parents;
+
+        children = selection(parents);
+
+        if (do_log > OFF)  log_stream.get() << "\n\n\nAfter selection: \n" << children;
+
+        crossover(children);
+
+        if (do_log > OFF)  log_stream.get() << "\n\n\nAfter crossover: \n" << children;
+
+        mutation(children);
+
+        if (do_log > OFF)  log_stream.get() << "\n\n\nAfter mutation: \n" << children;
+
+        pop_eval(children);
+
+        children = merge_calc_front_and_dist(parents, children);
+
+        if (do_log > OFF)  log_stream.get() << "After merge: \n" << children;
+
+        parents = children;
+
+        return (my_checkpoints(parents));
     }
 };
 

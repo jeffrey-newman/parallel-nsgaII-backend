@@ -12,13 +12,10 @@
 #include <limits>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
+#include "MinOrMax.hpp"
 
 
 
-enum MinOrMaxType {
-    MINIMISATION,
-    MAXIMISATION
-};
 
 
 class ProblemDefinitions

@@ -178,6 +178,12 @@ public:
     {
         objectives = objs;
     }
+
+    std::pair<std::vector<double> &, std::vector<double> &>
+    getMutableObjectivesAndConstraints()
+    {
+        return std::tie(objectives, constraints);
+    };
     
     const std::vector<double> &
     getConstraints() const

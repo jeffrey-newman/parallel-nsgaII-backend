@@ -142,6 +142,13 @@ public:
 
     }
 
+    void
+    calcFronts()
+    {
+            front_sets = debNonDominatedSort(*this);
+            valid_fronts = true;
+    }
+
     FrontsSPtr
     getFronts()
     {

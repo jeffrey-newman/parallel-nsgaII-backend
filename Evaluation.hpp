@@ -59,11 +59,13 @@ public:
     {
         BOOST_FOREACH(IndividualSPtr ind, *population)
         {
-            std::vector<double> objectives;
-            std::vector<double> constraints;
-            std::tie(objectives, constraints) = eval(ind->getRealDVVector(), ind->getIntDVVector());
-            ind->setObjectives(objectives);
-            ind->setConstraints(constraints);
+//            std::vector<double> objectives;
+//            std::vector<double> constraints;
+//            std::tie(objectives, constraints) = eval(ind->getRealDVVector(), ind->getIntDVVector());
+//            ind->setObjectives(objectives);
+//            ind->setConstraints(constraints);
+
+            ind->getMutableObjectivesAndConstraints() = eval(ind->getRealDVVector(), ind->getIntDVVector());
             
             // Too much copying of data in this function...
         }

@@ -1,3 +1,4 @@
+/*
 //
 //  Comparator.hpp
 //  NSGA-Parallel-Backend
@@ -5,6 +6,7 @@
 //  Created by a1091793 on 23/11/2015.
 //
 //
+ */
 
 #ifndef Comparator_h
 #define Comparator_h
@@ -15,7 +17,7 @@
 class Comparator
 {
 public:
-    
+
     static
     bool
     compareObjective(const Individual& ind1, const Individual& ind2, int index)
@@ -26,12 +28,38 @@ public:
         }
         return (ind1.getObjective(index) > ind2.getObjective(index));
     }
-    
+
     static
     bool
     compareObjective(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
     {
         return (compareObjective(*ind1, *ind2, index));
+    }
+
+    static
+    int
+    compareObjective2(const Individual& ind1, const Individual& ind2, int index)
+    {
+        if (ind1.isMinimiseOrMaximise(index) == MINIMISATION)
+        {
+            if (ind1.getObjective(index) < ind2.getObjective(index)) return 1;
+            if (ind1.getObjective(index) == ind2.getObjective(index)) return 0;
+            return 2;
+        }
+        else
+        {
+            if (ind1.getObjective(index) < ind2.getObjective(index)) return 2;
+            if (ind1.getObjective(index) == ind2.getObjective(index)) return 0;
+            return 1;
+        }
+        return (3);
+    }
+
+    static
+    int
+    compareObjective2(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
+    {
+        return (compareObjective2(*ind1, *ind2, index));
     }
 
     static int
@@ -48,7 +76,7 @@ public:
         int ind2_num_constr_violatn = 0;
         double rel_violation_ind1 = 0;
         double rel_violation_ind2 = 0;
-        
+
         for (int i = 0; i < ind1.numberOfConstraints(); ++i)
         {
             const double & constraint1 = ind1.getConstraint(i);
@@ -69,7 +97,7 @@ public:
                         rel_violation_ind2 += 1;
                         rel_violation_ind1 += constraint1/constraint2;
                     }
-                    
+
                 }
                 else
                 {
@@ -81,9 +109,9 @@ public:
                 ++ind2_num_constr_violatn;
                 rel_violation_ind2 += 1;
             }
-            
+
         }
-        
+
         // If both solutions infeasible, pick one which is has the smaller overall constraint violation
         if (ind1_num_constr_violatn != 0 && ind2_num_constr_violatn != 0)
         {
@@ -91,69 +119,61 @@ public:
             {
                 return (1);
             }
-            else if (ind1_num_constr_violatn == ind2_num_constr_violatn)
+            else if (ind1_num_constr_violatn > ind2_num_constr_violatn)
+            {
+                return (2);
+            }
+            else
             {
                 if (rel_violation_ind1 < rel_violation_ind2)
                 {
                     return (1);
                 }
-                else if (rel_violation_ind1 == rel_violation_ind2)
+                else if (rel_violation_ind1 > rel_violation_ind2)
                 {
-                    return 0;
+                    return (2);
                 }
-                return (2);
-                
             }
+        }
+            // if one solution is feasible.....
+//        else if (ind1_num_constr_violatn > 0 && ind2_num_constr_violatn == 0)
+        else if (ind1_num_constr_violatn > 0)
+        {
             return (2);
         }
-        // if one solution is feasible, choose this one.
-        else
+//        else if (ind1_num_constr_violatn == 0 && ind2_num_constr_violatn > 0)
+        else if (ind2_num_constr_violatn > 0)
         {
-            if (ind1_num_constr_violatn > 0 && ind2_num_constr_violatn == 0)
+            return (1);
+        }
+
+
+            // if both solutions are feasible (or they have the same number and relative constraint values,) choose
+            // the one which dominates via objective values.
+
+            int flag1 = 0;
+            int flag2 = 0;
+            for (int j=0; j < ind1.numberOfObjectives(); ++j)
             {
-                return (2);
+                int which_is_better = compareObjective2(ind1, ind2, j);
+                if (which_is_better == 1) flag1 = 1;
+                if (which_is_better == 2) flag2 = 1;
             }
-            else if (ind1_num_constr_violatn == 0 && ind2_num_constr_violatn > 0)
+            if (flag1==1 && flag2==0)
             {
                 return (1);
             }
-            // if both solutions are feasible, choose the one which dominates via objective values.
+            else if (flag1==0 && flag2==1)
+            {
+
+                return (2);
+            }
             else
             {
-                int flag1 = 0;
-                int flag2 = 0;
-                for (int j=0; j < ind1.numberOfObjectives(); ++j)
-                {
-                    if (compareObjective(ind1, ind2, j))
-                    {
-                        flag1 = 1;
-                        
-                    }
-                    else
-                    {
-                        if (compareObjective(ind2, ind1, j))
-                        {
-                            flag2 = 1;
-                        }
-                    }
-                }
-                if (flag1==1 && flag2==0)
-                {
-                    return (1);
-                }
-                else
-                {
-                    if (flag1==0 && flag2==1)
-                    {
-                        return (2);
-                    }
-                    else
-                    {
-                        return (0);
-                    }
-                }
+                return (0);
             }
-        }
+
+
         return (3);
     }
 
@@ -177,7 +197,7 @@ class ObjectiveValueCompator
 
 public:
     ObjectiveValueCompator(int _objective_index)
-    : objective_index(_objective_index)
+            : objective_index(_objective_index)
     {
 
     }
@@ -199,3 +219,4 @@ public:
 };
 
 #endif /* Comparator_h */
+
