@@ -64,6 +64,7 @@ public:
                 Better _is_maximise_hvol = MAXIMISE
                 )
     :
+    ref_point_array(new double[2]),
     volume(0),
     dataNumber(0),
     generation(0),
@@ -82,6 +83,7 @@ public:
             ref_point = _ref_point.get();
             axis_lengths = std::vector<double>(ref_point.size(), 0.0);
             dimension = ref_point.size();
+            delete[] ref_point_array;
             ref_point_array = new double[dimension];
             for (int var = 0; var < ref_point.size(); ++var)
             {
@@ -279,6 +281,7 @@ public:
                 
                 calc_ref_first_gen = false;
                 axis_lengths = std::vector<double>(ref_point.size(), 0.0);
+                delete[] ref_point_array;
                 ref_point_array = new double[dimension];
                 for (int var = 0; var < ref_point.size(); ++var)
                 {
