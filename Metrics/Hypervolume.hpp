@@ -18,7 +18,7 @@
 #include <boost/timer/timer.hpp>
 
 
-std::vector<double> dummy_point {0,0};
+//std::vector<double> dummy_point {0,0};
 
 class Hypervolume : public MetricBase
 {

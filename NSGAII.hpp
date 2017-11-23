@@ -178,7 +178,7 @@ public:
     }
 
     void
-    initialisePop(PopulationSPtr _initial_pop)
+    initialiseWithPop(PopulationSPtr _initial_pop)
     {
         this->restart(_initial_pop);
     }
