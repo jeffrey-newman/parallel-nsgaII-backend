@@ -182,7 +182,7 @@ public:
     std::tuple<std::vector<double> &, std::vector<double> &>
     getMutableObjectivesAndConstraints()
     {
-        return std::make_pair(objectives, constraints);
+        return std::tie(objectives, constraints);
     };
     
     const std::vector<double> &
