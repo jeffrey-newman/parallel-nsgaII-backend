@@ -155,7 +155,7 @@ public:
     PopulationSPtr
     step(PopulationSPtr _initial_pop)
     {
-        this->restart(_initial_pop);
+        this->initialise(_initial_pop);
         return(this->step());
     }
 
@@ -172,7 +172,7 @@ public:
     PopulationSPtr
     run(PopulationSPtr _initial_pop)
     {
-        this->restart(_initial_pop);
+        this->initialise(_initial_pop);
         return(this->run());
 
     }
@@ -180,7 +180,7 @@ public:
     void
     initialiseWithPop(PopulationSPtr _initial_pop)
     {
-        this->restart(_initial_pop);
+        this->initialise(_initial_pop);
     }
 
     bool
@@ -205,9 +205,9 @@ public:
 private:
 
     void
-    restart(PopulationSPtr _parents)
+    initialise(PopulationSPtr _parents)
     {
-        if (do_log > OFF)  log_stream.get() << "Restarting GA: \n";
+        if (do_log > OFF)  log_stream.get() << "Initialising GA: \n";
         gen_num = 0;
         is_finished = false;
         parents = _parents;
