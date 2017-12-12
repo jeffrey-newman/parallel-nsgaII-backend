@@ -242,17 +242,36 @@ public:
 
 
 inline PopulationSPtr
-restore_population(boost::filesystem::path filename)
+restore_population(boost::filesystem::path filename, ProblemDefinitionsSPtr defs)
 {
-    // open the archive
-    std::ifstream ifs(filename.c_str());
-    assert(ifs.good());
-    assert(ifs.is_open());
-    boost::archive::xml_iarchive ia(ifs);
-
     PopulationSPtr pop(new Population);
-    // restore the schedule from the archive
-    ia >> BOOST_SERIALIZATION_NVP(pop);
+    std::string extension = filename.extension().string();
+    if (extension == ".txt")
+    {
+        pop.reset(new Population(filename, defs));
+
+        std::ofstream of(filename.string().c_str());
+        if (of)
+        {
+            of << pop;
+        }
+    }
+    else if(extension == ".xml")
+    {
+        // open the archive
+        std::ifstream ifs(filename.c_str());
+        assert(ifs.good());
+        assert(ifs.is_open());
+        boost::archive::xml_iarchive ia(ifs);
+
+        // restore the schedule from the archive
+        ia >> BOOST_SERIALIZATION_NVP(pop);
+    }
+    else
+    {
+        std::cout << "Unrecognised file format for loading population from\n";
+    }
+
     return (pop);
 }
 
@@ -307,6 +326,47 @@ operator<<(std::ostream& os, const Population& pop)
                     os << ind << "\n";
                 }
     return os;
+}
+
+inline void
+print(const Population& pop, boost::filesystem::path file)
+{
+    std::string extension = file.extension().string();
+    if (extension == ".txt")
+    {
+        std::ofstream of(file.string().c_str());
+        if (of)
+        {
+            of << pop;
+        }
+    }
+    else if(extension == ".xml")
+    {
+        std::ofstream ofs(file.string().c_str());
+        if (ofs)
+        {
+            boost::archive::xml_oarchive oa(ofs);
+            oa << boost::serialization::make_nvp("Population", pop);
+        }
+
+    }
+    else
+    {
+        std::string filename = file.stem().string();
+        if (filename == ".'") filename = "population";
+        boost::filesystem::path file_i_extn = file.parent_path() / (filename + ".txt");
+        std::ofstream of(file_i_extn.string().c_str());
+        if (of)
+        {
+            of << pop;
+        }
+    }
+}
+
+inline void
+print(const PopulationSPtr pop, boost::filesystem::path file)
+{
+    print(*pop, file);
 }
 
 #include "DebsNondominatedSorting.hpp"
