@@ -249,12 +249,6 @@ restore_population(boost::filesystem::path filename, ProblemDefinitionsSPtr defs
     if (extension == ".txt")
     {
         pop.reset(new Population(filename, defs));
-
-        std::ofstream of(filename.string().c_str());
-        if (of)
-        {
-            of << pop;
-        }
     }
     else if(extension == ".xml")
     {
