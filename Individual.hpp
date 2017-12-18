@@ -355,23 +355,23 @@ operator<<(std::ostream& os, const Individual & ind)
     {
         os << idv << " ";
     }
-    os << ";\t";
+    os << "; ";
     BOOST_FOREACH(const double & ddv, ind.getRealDVVector())
     {
         os << ddv << " ";
     }
-    os << "]\t->\t(";
+    os << "] -> ( ";
     BOOST_FOREACH(const double & obj, ind.getObjectives())
     {
         os << obj << " ";
     }
-    os << ";\t";
+    os << "; ";
     BOOST_FOREACH(const double & cnstrnt, ind.getConstraints())
     {
         os << cnstrnt << " ";
     }
-    os << ")\t";
-    os << "Rank: " << ind.getRank() << "\tCrowdingDist: " << ind.getCrowdingScore();
+    os << ") ";
+    os << "Rank: " << ind.getRank() << " CrowdingDist: " << ind.getCrowdingScore();
 //    if (ind.mutated) os << "\tMutated";
 //    if (ind.crossovered) os << "\tCrossovered" << std::endl;
 //    if (ind.child) os << "\tFrom_Child";
