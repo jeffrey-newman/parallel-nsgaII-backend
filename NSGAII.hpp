@@ -202,6 +202,45 @@ public:
 
     }
 
+    void
+    postProcess(PopulationSPtr pop_2_process,  boost::filesystem::path save_dir)
+    {
+        ObjectiveValueCompator obj_comparator(0);
+        std::sort(pop_2_process->begin(), pop_2_process->end(), obj_comparator);
+
+        //Save before incase pop_eval takes a long time.
+        boost::filesystem::path save_file = save_dir / "post_processed_pop.xml";
+        std::ofstream ofs(save_file.c_str());
+        assert(ofs.good());
+        boost::archive::xml_oarchive oa(ofs);
+        oa << boost::serialization::make_nvp("Population", *pop_2_process);
+        ofs.close();
+
+        boost::filesystem::path save_file2 = save_dir /  "post_processed_pop.txt";
+        std::ofstream ofs2(save_file2.c_str());
+        assert(ofs2.good());
+        ofs2 << *pop_2_process;
+        ofs2.close();
+
+        pop_eval(pop_2_process, save_dir);
+
+        //Save after so that files are updated with objs and constraints
+        boost::filesystem::path save_file3 = save_dir / "post_processed_pop.xml";
+        std::ofstream ofs3(save_file3.c_str());
+        assert(ofs3.good());
+        boost::archive::xml_oarchive oa3(ofs3);
+        oa3 << boost::serialization::make_nvp("Population", *pop_2_process);
+        ofs3.close();
+
+
+        boost::filesystem::path save_file4 = save_dir /  "post_processed_pop.txt";
+        std::ofstream ofs4(save_file4.c_str());
+        assert(ofs4.good());
+        ofs4 << *pop_2_process;
+        ofs4.close();
+
+    }
+
 private:
 
     void

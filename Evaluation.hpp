@@ -18,9 +18,26 @@
 class ObjectivesAndConstraintsBase
 {
 public:
+    /**
+     * Evaluate a solution.
+     * @param real_decision_vars
+     * @param int_decision_vars
+     * @return
+     */
     virtual
     std::pair<std::vector<double>, std::vector<double> > &
     operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars) = 0;
+
+    /**
+     * Evaluate a solution, including saving details of the evaluation in save_dir.
+     * @param real_decision_vars
+     * @param int_decision_vars
+     * @param save_dir Where the evaluation is saved to.
+     * @return
+     */
+    virtual
+    std::pair<std::vector<double>, std::vector<double> > &
+    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, boost::filesystem::path & save_dir) = 0;
 };
 
 class DummyObjectivesAndConstraints : public ObjectivesAndConstraintsBase
@@ -34,13 +51,33 @@ public:
     {
         return (dummy_return);
     }
+
+    std::pair<std::vector<double>, std::vector<double> > &
+    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, boost::filesystem::path & save_dir)
+    {
+        return (dummy_return);
+    };
 };
 
 class EvaluatePopulationBase
 {
 public:
+    /**
+     * Evaluation all memebers of a population
+     * @param population
+     */
     virtual void
     operator()(PopulationSPtr population) = 0;
+
+    /**
+     * Evaluate all memebers of a population, and save each memeber. Implementations of this
+     * function will need to create directories for each member of the population to be
+     * saved into.
+     * @param population
+     * @param save_dir where the members of population are saved to. Make subdirectories in this folder.
+     */
+    virtual void
+    operator()(PopulationSPtr population, boost::filesystem::path & save_dir) = 0;
 };
 
 class EvaluatePopulation : public EvaluatePopulationBase
@@ -57,18 +94,22 @@ public:
     void
     operator()(PopulationSPtr population)
     {
-        BOOST_FOREACH(IndividualSPtr ind, *population)
+        for(IndividualSPtr ind: *population)
         {
-//            std::vector<double> objectives;
-//            std::vector<double> constraints;
-//            std::tie(objectives, constraints) = eval(ind->getRealDVVector(), ind->getIntDVVector());
-//            ind->setObjectives(objectives);
-//            ind->setConstraints(constraints);
-
             ind->getMutableObjectivesAndConstraints() = eval(ind->getRealDVVector(), ind->getIntDVVector());
-            
-            // Too much copying of data in this function...
         }
+    }
+
+    void
+    operator()(PopulationSPtr population, boost::filesystem::path & save_dir)
+    {
+        int i = 0;
+        for(IndividualSPtr ind: *population)
+                    {
+                        boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(i++));
+                        if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
+                        ind->getMutableObjectivesAndConstraints() = eval(ind->getRealDVVector(), ind->getIntDVVector(), save_ind_dir);
+                    }
     }
 };
 

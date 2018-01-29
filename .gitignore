@@ -1,2 +1,8 @@
 /.project
 /.idea/
+.Rproj.user
+PostRunProcessing/.idea/misc.xml
+PostRunProcessing/.idea/modules.xml
+PostRunProcessing/.idea/workspace.xml
+PostRunProcessing/.idea/PostRunProcessing.iml
+PostRunProcessing/.idea/libraries/R_User_Library.xml
