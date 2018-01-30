@@ -9,8 +9,9 @@ printParetoFront <- function(pop_file, pdf_file, xlab, ylab)
 {
     pop <- readPopulation(pop_file)
     pop[[2]]$Obj2 <- pop[[2]]$Obj2 / 1E6
+    pop[[2]]$solnid <- as.character(rownames(pop[[2]]))
     pdf(pdf_file, 6, 4, useDingbats = FALSE)
-    plot <- ggplot(data=pop[[2]], mapping=aes(x=Obj1, y=Obj2, label=rownames())) + geom_point(shape=21) + labs(x=xlab, y=ylab) + theme_minimal()
+    plot <- ggplot(data=pop[[2]], mapping=aes(x=Obj1, y=Obj2, label=solnid)) + geom_point(shape=21) + labs(x=xlab, y=ylab) + theme_minimal()
     print(plot)
     dev.off()
 }
