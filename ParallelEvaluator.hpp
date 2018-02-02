@@ -481,11 +481,11 @@ public:
         while (do_continue)
         {
             boost::mpi::broadcast(world, save_dir_s,0);
-            if (save_dir == NO_SAVE)
+            if (save_dir_s == NO_SAVE)
             {
                 do_save = false;
             }
-            else if (save_dir == TERMINATE)
+            else if (save_dir_s == TERMINATE)
             {
                 in_generation = false;
                 do_continue = false;
