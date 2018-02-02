@@ -134,7 +134,7 @@ public:
             if (!logging_file.is_open())
             {
                 do_log = OFF;
-                std::cout << "attempt to log in hypervolume evaluator failed\n";
+                std::cout << "attempt to log in hypervolume evaluator using " << logfile.string() << " failed\n";
             }
             else
             {

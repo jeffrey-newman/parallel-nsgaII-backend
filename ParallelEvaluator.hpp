@@ -480,10 +480,17 @@ public:
         
         while (do_continue)
         {
+            if (do_log > OFF)
+                log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                 << " Waiting to receive save-dir" << std::endl;
             boost::mpi::broadcast(world, save_dir_s,0);
             if (save_dir_s == NO_SAVE)
             {
                 do_save = false;
+                if (do_log > OFF)
+                    log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " Not saving evaluation to file" << std::endl;
+                in_generation = true;
             }
             else if (save_dir_s == TERMINATE)
             {
@@ -498,6 +505,9 @@ public:
             {
                 do_save = true;
                 save_dir = save_dir_s;
+                if (do_log > OFF)
+                    log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " Saving evaluation here: " << save_dir_s << std::endl;
                 in_generation = true;
             }
 
@@ -533,8 +543,9 @@ public:
 
                     if (do_log > OFF)
                         log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                         << " sending " << objs_and_constraints << " for individual " << s.tag()
-                                         << std::endl;
+                                         << " sending " << objs_and_constraints << " for individual " << s.tag();
+                        log_stream.get().flush();
+//                                         << std::endl;
                     if (!first_time)
                     {
                         rq.wait();
@@ -545,6 +556,8 @@ public:
                         first_time = false;
                     }
                     rq = world.isend(0, s.tag(), oc_c);
+                    if (do_log > OFF)
+                        log_stream.get() << "; now sent"  << std::endl;
 
                 }
             }
@@ -575,20 +588,27 @@ public:
     {
         bool do_continue = true;
         bool in_generation = true;
-        boost::mpi::request rq;
-        bool first_time = true;
+//        boost::mpi::request rq;
+//        bool first_time = true;
         std::string save_dir_s;
         boost::filesystem::path save_dir;
         bool do_save;
 
         while (do_continue)
         {
+            if (do_log > OFF)
+                log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                 << " Waiting to receive save-dir" << std::endl;
             boost::mpi::broadcast(world, save_dir_s,0);
-            if (save_dir == "no_save")
+            if (save_dir_s == "no_save")
             {
                 do_save = false;
+                if (do_log > OFF)
+                    log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " Not saving evaluation to file" << std::endl;
+                in_generation = true;
             }
-            else if (save_dir == "terminate")
+            else if (save_dir_s == "terminate")
             {
                 in_generation = false;
                 do_continue = false;
@@ -601,6 +621,9 @@ public:
             {
                 do_save = true;
                 save_dir = save_dir_s;
+                if (do_log > OFF)
+                    log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " Saving evaluation here: " << save_dir_s << std::endl;
                 in_generation = true;
             }
             while (in_generation)
@@ -637,15 +660,15 @@ public:
                         log_stream.get() << world.rank() << ": " << boost::posix_time::second_clock::local_time()
                                          << " sending " << objs_and_constraints << " for individual " << s.tag()
                                          << std::endl;
-                    if (!first_time)
-                    {
-                        rq.wait();
-
-                    }
-                    else
-                    {
-                        first_time = false;
-                    }
+//                    if (!first_time)
+//                    {
+//                        rq.wait();
+//
+//                    }
+//                    else
+//                    {
+//                        first_time = false;
+//                    }
                     world.send(0, s.tag(), oc_c);
 
                 }
