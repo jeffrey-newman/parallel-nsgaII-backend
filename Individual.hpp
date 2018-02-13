@@ -103,12 +103,14 @@ public:
                                                         >> qi::lit(';')
                                                         >> real_vec_parser[ph::ref(this->real_decision_variables) = qi::_1]
                                                         >> qi::lit(']')
-                                                        >> qi::lit("->")
-                                                        >> qi::lit('(')
-                                                        >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
-                                                        >> qi::lit(';')
-                                                        >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
-                                                        >> qi::lit(')')
+                                                        >> -(
+                                                                qi::lit("->")
+                                                                >> qi::lit('(')
+                                                                >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
+                                                                >> qi::lit(';')
+                                                                >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
+                                                                >> qi::lit(')')
+                                                           )
                                                         >> -(qi::lit("Rank:") >> qi::int_[ph::ref(this->rank) = qi::_1])
                                                         >> -(qi::lit("CrowdingDist:") >> qi::double_[ph::ref(this->crowding_score) = qi::_1]);
         ind_parser.name("individual_parser");
@@ -125,8 +127,16 @@ public:
             std::cout << "-------------------------\n";
         }
 
-        if (this->real_decision_variables.size() < this->numberOfRealDecisionVariables()) this->real_decision_variables.resize(this->numberOfRealDecisionVariables());
-        if (this->int_decision_variables.size() < this->numberOfIntDecisionVariables()) this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
+        if (this->real_decision_variables.size() < this->numberOfRealDecisionVariables())
+        {
+            std::cerr << "Check specification - read in " << this->real_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfRealDecisionVariables() << " real decision variables." << std::endl;
+            this->real_decision_variables.resize(this->numberOfRealDecisionVariables());
+        }
+        if (this->int_decision_variables.size() < this->numberOfIntDecisionVariables())
+        {
+            std::cerr << "Check specification - read in " << this->int_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfIntDecisionVariables() << " integer decision variables." << std::endl;
+            this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
+        }
         if (this->objectives.size() < this->numberOfObjectives()) this->objectives.resize(this->numberOfObjectives());
         if (this->constraints.size() < this->numberOfConstraints()) this->constraints.resize(this->numberOfConstraints());
     }
