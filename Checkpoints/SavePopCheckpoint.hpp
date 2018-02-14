@@ -31,13 +31,17 @@ public:
     operator()(PopulationSPtr population)
     {
         ++gen_number;
+        if (gen_number == 0)
+        {
+            savePop(population);
+        }
+        if (gen_number == 1)
+        {
+            savePop(population);
+        }
         if (gen_number % gen_frequency == 0)
         {
-            boost::filesystem::path save_file = save_path / ("pop_gen" + std::to_string(gen_number) + ".xml");
-            std::ofstream ofs(save_file.c_str());
-            assert(ofs.good());
-            boost::archive::xml_oarchive oa(ofs);
-            oa << BOOST_SERIALIZATION_NVP(population);
+            savePop(population);
         }
         return true;
     }
@@ -49,6 +53,17 @@ public:
             ar & BOOST_SERIALIZATION_NVP(gen_frequency);
             ar & BOOST_SERIALIZATION_NVP(gen_number);
             ar & BOOST_SERIALIZATION_NVP(save_path);
+    }
+
+private:
+    void
+    savePop(PopulationSPtr population)
+    {
+        boost::filesystem::path save_file = save_path / ("pop_gen" + std::to_string(gen_number) + ".xml");
+        std::ofstream ofs(save_file.c_str());
+        assert(ofs.good());
+        boost::archive::xml_oarchive oa(ofs);
+        oa << BOOST_SERIALIZATION_NVP(population);
     }
 };
 

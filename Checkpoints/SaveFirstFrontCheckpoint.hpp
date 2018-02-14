@@ -31,23 +31,17 @@ public:
     operator()(PopulationSPtr population)
     {
         ++gen_number;
+        if (gen_number == 0)
+        {
+            savePop(population);
+        }
+        if (gen_number == 1)
+        {
+            savePop(population);
+        }
         if (gen_number % gen_frequency == 0)
         {
-            boost::filesystem::path save_file = save_path / ("first_front_gen" + std::to_string(gen_number) + ".xml");
-            std::ofstream ofs(save_file.c_str());
-            assert(ofs.good());
-            boost::archive::xml_oarchive oa(ofs);
-
-            Population & first_front = population->getFronts()->at(0);
-            oa << BOOST_SERIALIZATION_NVP(first_front);
-
-            if (txt_rep)
-            {
-                boost::filesystem::path save_file2 = save_path / ("first_front_gen" + std::to_string(gen_number) +  ".txt");
-                std::ofstream ofs2(save_file2.c_str());
-                assert(ofs2.good());
-                ofs2 << population->getFronts()->at(0);
-            }
+            savePop(population);
         }
         return true;
     }
@@ -59,6 +53,28 @@ public:
             ar & BOOST_SERIALIZATION_NVP(gen_frequency);
             ar & BOOST_SERIALIZATION_NVP(gen_number);
             ar & BOOST_SERIALIZATION_NVP(save_path);
+    }
+
+private:
+
+    void
+    savePop(PopulationSPtr population)
+    {
+        boost::filesystem::path save_file = save_path / ("first_front_gen" + std::to_string(gen_number) + ".xml");
+        std::ofstream ofs(save_file.c_str());
+        assert(ofs.good());
+        boost::archive::xml_oarchive oa(ofs);
+
+        Population & first_front = population->getFronts()->at(0);
+        oa << BOOST_SERIALIZATION_NVP(first_front);
+
+        if (txt_rep)
+        {
+            boost::filesystem::path save_file2 = save_path / ("first_front_gen" + std::to_string(gen_number) +  ".txt");
+            std::ofstream ofs2(save_file2.c_str());
+            assert(ofs2.good());
+            ofs2 << population->getFronts()->at(0);
+        }
     }
 };
 
