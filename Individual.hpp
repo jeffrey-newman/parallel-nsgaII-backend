@@ -137,6 +137,34 @@ public:
             std::cerr << "Check specification - read in " << this->int_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfIntDecisionVariables() << " integer decision variables." << std::endl;
             this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
         }
+        for (int j = 0; j < real_decision_variables.size() ; ++j)
+        {
+            if (real_decision_variables[j] < defs->real_lowerbounds[j])
+            {
+                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->real_lowerbounds[j] << std::endl;
+                real_decision_variables[j] = defs->real_lowerbounds[j];
+            }
+            if (real_decision_variables[j] > defs->real_upperbounds[j])
+            {
+                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->real_upperbounds[j] << std::endl;
+                real_decision_variables[j] = defs->real_upperbounds[j];
+            }
+        }
+        for (int j = 0; j < int_decision_variables.size() ; ++j)
+        {
+            if (int_decision_variables[j] < defs->int_lowerbounds[j])
+            {
+                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->int_lowerbounds[j] << std::endl;
+                int_decision_variables[j] = defs->int_lowerbounds[j];
+            }
+            if (int_decision_variables[j] > defs->int_upperbounds[j])
+            {
+                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->int_upperbounds[j] << std::endl;
+                int_decision_variables[j] = defs->int_upperbounds[j];
+            }
+        }
+
+
         if (this->objectives.size() < this->numberOfObjectives()) this->objectives.resize(this->numberOfObjectives());
         if (this->constraints.size() < this->numberOfConstraints()) this->constraints.resize(this->numberOfConstraints());
     }

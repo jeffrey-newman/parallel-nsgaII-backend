@@ -114,10 +114,38 @@ public:
         for (int j=0;j < individal_1.numberOfRealDecisionVariables(); ++j)
         {//for each real in chrom
             
-            const double & dvar_value_par1 = individal_1.getRealDV(j);
-            const double & dvar_value_par2 = individal_2.getRealDV(j);
+            double dvar_value_par1 = individal_1.getRealDV(j);
+            double dvar_value_par2 = individal_2.getRealDV(j);
             const double & yl = individal_1.getRealLowerBound(j);//lower limt of variable j of ind i
             const double & yu = individal_1.getRealUpperBound(j);//upper limt of variable j of ind i
+
+
+            //Sanity check. Otherwise NaN are produced.
+                if (dvar_value_par1 < yl)
+                {
+                    std::cerr << "real decision variable " << dvar_value_par1 << " at place " << j << " out of bounds; setting to lower bound which is " << yl << std::endl;
+                    dvar_value_par1 = yl;
+                }
+                if (dvar_value_par1 > yu)
+                {
+                    std::cerr << "input real decision variable " << dvar_value_par1 << " at place " << j << " out of bounds; setting to upper bound which is " << yu << std::endl;
+                    dvar_value_par1 = yu;
+                }
+            if (dvar_value_par2 < yl)
+            {
+                std::cerr << "real decision variable " << dvar_value_par2 << " at place " << j << " out of bounds; setting to lower bound which is " << yl << std::endl;
+                dvar_value_par2 = yl;
+            }
+            if (dvar_value_par2 > yu)
+            {
+                std::cerr << "input real decision variable " << dvar_value_par2 << " at place " << j << " out of bounds; setting to upper bound which is " << yu << std::endl;
+                dvar_value_par2 = yu;
+            }
+
+
+
+
+
             
             if (this->cross_uniform(this->random_number_gen)<=0.5) //only half of the bits in chrom2 will be crossed
             {
