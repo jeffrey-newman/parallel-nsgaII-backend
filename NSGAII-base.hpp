@@ -1,10 +1,6 @@
 //
 // Created by a1091793 on 17/04/18.
 //
-
-#ifndef CHARLES_METRO_CAL_V2_NSGAII_BASE_HPP
-#define CHARLES_METRO_CAL_V2_NSGAII_BASE_HPP
-
 //
 //  NSGAII.hpp
 //  NSGA-Parallel-Backend
@@ -13,8 +9,8 @@
 //
 //
 
-#ifndef NSGAII_h
-#define NSGAII_h
+#ifndef NSGAII_BASE_h
+#define NSGAII_BASE_h
 
 #include <iostream>
 #include <functional>
@@ -264,7 +260,7 @@ private:
 };
 
 
-#endif /* NSGAII_h */
+#endif /* NSGAII_BASE_h */
 
 
-#endif //CHARLES_METRO_CAL_V2_NSGAII_BASE_HPP
+

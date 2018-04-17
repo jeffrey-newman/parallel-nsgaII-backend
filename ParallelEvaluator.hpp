@@ -18,6 +18,9 @@
 #include <functional>
 #include <queue>
 #include <unordered_map>
+#include "Selection.hpp"
+#include "Crossover.hpp"
+#include "Mutation.hpp"
 
 
 class ParallelEvaluatorBase
@@ -672,7 +675,7 @@ public:
     }
 };
 
-
+template <typename RNG = std::mt19937>
 class ParallelEvaluatePopServerNonBlockingContinuousEvolution : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
 
@@ -732,9 +735,9 @@ public:
     }
 
     void
-    makeJobsApplyEAOperators(PopulationSPtr population)
+    makeJobsApplyEAOperators()
     {
-        PopulationSPtr sub_pop = selection(population, 2);
+        PopulationSPtr sub_pop = selection(2);
         crossover(sub_pop);
         mutation(sub_pop);
         std::for_each(*sub_pop, [&selection](IndividualSPtr ind) -> void {jobs.push(ind); if (addOffspring2Selection) selection.add2BreedingPop(ind);});
@@ -795,7 +798,7 @@ public:
             ++results_received;
 
             // Send out new job.
-            if (jobs.size() == 0) makeJobsApplyEAOperators();
+            if (jobs.size() == 0) makeJobsApplyEAOperators(2);
             decision_vars.first = jobs.front()->getRealDVVector();
             decision_vars.second = jobs.front()->getIntDVVector();
 
@@ -825,7 +828,7 @@ public:
 
         for (int i = 0; i < number_clients; ++i)
         {
-            world.isend(client_id, max_tag - 1, save_dir);
+            world.isend(i, max_tag - 1, save_dir);
         }
 
         if (do_log > OFF) log_stream.get() << "Evaluating population with size: " << population->size() << std::endl;
@@ -870,8 +873,9 @@ public:
                 {
                     //we must have timed out
                     r.cancel();
-                    jobs_running.erase(individual);
+
                 }
+                jobs_running.erase(individual);
 
             }
             jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
@@ -909,8 +913,8 @@ public:
                 {
                     //we must have timed out
                     r.cancel();
-                    jobs_running.erase(individual);
                 }
+                jobs_running.erase(individual);
 
             }
             jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
@@ -950,18 +954,13 @@ public:
                 if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
                 (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
                 (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
-                if (!oss)
-                {
-                    if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                    jobs_running[s.tag()].cancel();
-                }
                 jobs_running.erase(s.tag());
 
                 // Send out new job.
                 decision_vars.first = (*population)[individual]->getRealDVVector();
                 decision_vars.second = (*population)[individual]->getIntDVVector();
-                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars << std::endl;
+                int client_id = s.source();
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " individual " << individual << " with " << decision_vars << std::endl;
                 if (jobs_running.count(individual) != 0)
                 {
                     //start a receive request, non-blocking
@@ -985,8 +984,8 @@ public:
                     {
                         //we must have timed out
                         r.cancel();
-                        jobs_running.erase(individual);
                     }
+                    jobs_running.erase(individual);
 
                 }
                 jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
@@ -999,13 +998,7 @@ public:
 
         }
 
-        // test for sanity
-        if ((num_additional_jobs + num_initial_jobs) != jobs_running.size())
-        {
-            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " Logic error: job accounting wrong or there were incomplete jobs" << std::endl;
-        }
-
-        for (int i = 0; i < (num_initial_jobs + num_additional_jobs); ++i)
+        for (int j = 0; j < jobs_running.size(); ++j)
         {
             //start a receive request, non-blocking
             boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
@@ -1035,30 +1028,33 @@ public:
                 if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
                 (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
                 (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
+                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].first.test();
                 if (!oss)
                 {
                     if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                    jobs_running[s.tag()].cancel();
+                    jobs_running[s.tag()].first.cancel();
                 }
                 jobs_running.erase(s.tag());
+
             }
 
         }
 
-        BOOST_FOREACH(JobRunningT & job, jobs_running)
-                    {
-                        // Failed jobs.
-                        // set decision variables to something not so good.
-                        boost::optional<boost::mpi::status> oss = job.second.test();
-                        if (!oss)
-                        {
-                            if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                            job.second.cancel();
-                        }
-                        (*population)[job.first]->setObjectives(this->worst_objs_and_constraints.first);
-                        (*population)[job.first]->setConstraints(this->worst_objs_and_constraints.second);
-                    }
+        for(std::pair<int, std::pair<boost::mpi::request, IndividualSPtr> > & job; jobs_running)
+        {
+            // Failed jobs.
+                    // set decision variables to something not so good.
+            boost::optional<boost::mpi::status> oss = job.second.first.test();
+            if (!oss)
+            {
+                if (do_log > OFF) log_stream.get() << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
+                job.second.first.cancel();
+            }
+            (*population)[job.first]->setObjectives(this->worst_objs_and_constraints.first);
+            (*population)[job.first]->setConstraints(this->worst_objs_and_constraints.second);
+        }
+        jobs_running.clear();
+
 
         for (int i = 0; i < number_clients; ++i)
         {
@@ -1191,7 +1187,7 @@ public:
 
                 if (in_generation)
                 {
-                    std::vector<double>, std::vector<int> > & job = jobs.front();
+                    std::pair< int, std::pair<std::vector<double>, std::vector<int> > > & job = jobs.front();
                     if (job.first == gen_number)
                     {
                         //calc objective

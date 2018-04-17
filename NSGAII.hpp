@@ -9,28 +9,9 @@
 #ifndef NSGAII_h
 #define NSGAII_h
 
-#include <iostream>
-#include <functional>
 
-#include <boost/scoped_ptr.hpp>
-#include "Selection.hpp"
-#include "Crossover.hpp"
-#include "Mutation.hpp"
-#include "DebsCrowdingDistance.hpp"
-#include "DebsNondominatedSorting.hpp"
-#include "Checkpoint.hpp"
-#include "Evaluation.hpp"
-#include "Merge.hpp"
-#include "Population.hpp"
+#include "NSGAII-base.hpp"
 
-
-#ifdef WITH_VTK
-#include "Checkpoints/PlotFronts.hpp"
-#endif
-
-#include <boost/serialization/nvp.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/filesystem.hpp>
 
 
 //enum Visualise{ON, OFF};
