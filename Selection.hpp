@@ -106,4 +106,119 @@ public:
     
 };
 
+template <typename RNG = std::mt19937>
+class TournamentSelectionContinuousEvolution
+{
+
+
+private:
+    std::uniform_real_distribution<double> sel_uniform;
+    unsigned seed_selection;
+    RNG default_rng_selection;
+
+    RNG & random_number_gen;
+
+    std::vector<IndividualSPtr> a1, a2;
+    int pos;
+
+
+    IndividualSPtr
+    tournament(IndividualSPtr ind1, IndividualSPtr ind2)
+    {
+        int flag;
+        flag = Comparator::whichDominates(ind1, ind2);
+        if (flag==1)
+        {
+            return (ind1);
+        }
+        if (flag==2)
+        {
+            return (ind2);
+        }
+        if (ind1->getCrowdingScore() > ind2->getCrowdingScore())
+        {
+            return(ind1);
+        }
+        if (ind2->getCrowdingScore() > ind1->getCrowdingScore())
+        {
+            return(ind2);
+        }
+        if ( sel_uniform(random_number_gen) <= 0.5)
+        {
+            return(ind1);
+        }
+        else
+        {
+            return(ind2);
+        }
+    }
+
+    void
+    resortBreedingPop()
+    {
+        std::shuffle(a1.begin(), a1.end(), random_number_gen);
+        pos = 0;
+    }
+
+public:
+    TournamentSelectionContinuousEvolution()
+        :
+        sel_uniform(0.0,1.0),
+        seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
+        default_rng_selection(seed_selection),
+        random_number_gen(default_rng_selection),
+        pos(0)
+    {
+
+    }
+
+    TournamentSelectionContinuousEvolution(RNG & rng)
+        :
+        sel_uniform(0.0,1.0),
+        seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
+        default_rng_selection(seed_selection),
+        random_number_gen(rng),
+        pos(0)
+    {
+
+    }
+
+    void
+    resetBreedingPop(PopulationSPtr pop)
+    {
+        a1.clear();
+        for (int i = 0; i < parent_pop->populationSize(); ++i)
+        {
+            a1.push_back((*parent_pop)[i]);
+        }
+        std::shuffle(a1.begin(), a1.end(), random_number_gen);
+        pos = 0;
+    }
+
+    void
+    add2BreedingPop(IndividualSPtr ind)
+    {
+        std::uniform_int_distribution<int> uid(0, a1.size() - 1);
+        a1.insert(a1.begin() + uid(random_number_gen, ind));
+    }
+
+    PopulationSPtr
+    operator()(int number_selected)
+    {
+        for (int i = 0; i < number_selected; ++i)
+        {
+            PopulationSPtr selected_pop(new Population);
+            if (pos >= a1.size()) resortBreedingPop();
+            IndividualSPtr ind1 = a1[pos++];
+            if (pos >= a1.size()) resortBreedingPop();
+            IndividualSPtr ind2 = a1[pos++];
+            selected_pop->push_back(IndividualSPtr(new Individual(*(tournament(ind1, ind2)))));
+        }
+
+        return (selected_pop);
+    }
+
+
+};
+
 #endif /* Selection_h */

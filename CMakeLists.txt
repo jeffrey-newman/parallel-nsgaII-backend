@@ -39,10 +39,7 @@ SET(BackendSources
 	Crossover.hpp
 	Individual.hpp
 	Mutation.hpp
-	parallel_nsgaII_backend.cpp
-	parallel_nsgaII_backend.hpp
-	parallel_nsgaII_backendPriv.hpp
-	Population.hpp
+        Population.hpp
 		Population.cpp
 	Types.hpp
 	)
