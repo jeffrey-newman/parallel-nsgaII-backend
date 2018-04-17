@@ -69,14 +69,23 @@ private:
     bool
     step_impl()
     {
+        ++gen_num;
+
         if (is_fstream == true)
         {
             std::ofstream * fstreamPtr = dynamic_cast<std::ofstream *>(&(log_stream.get()));
             fstreamPtr->close();
-            fstreamPtr->open(f_path.c_str(), std::ios_base::out | std::ios_base::trunc);
+            boost::filesystem::path log_path = this->f_path.parent_path() / (this->f_path.stem().string() + std::string("_gen_") + std::to_string(gen_num) + this->f_path.extension().string());
+            boost::filesystem::path old_path = this->f_path.parent_path() / (this->f_path.stem().string() + std::string("_gen_") + std::to_string(gen_num - 2) + this->f_path.extension().string());
+            if (boost::filesystem::exists(old_path))
+            {
+                if (boost::filesystem::is_regular_file(old_path)) boost::filesystem::remove(old_path);
+            }
+            fstreamPtr->open(log_path.c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!fstreamPtr->is_open()) do_log = OFF;
         }
-        if (do_log > OFF)  log_stream.get() << "Generation: " << ++gen_num << "\n";
+
+        if (do_log > OFF)  log_stream.get() << "Generation: " << gen_num << "\n";
         if (do_log > OFF)  log_stream.get() << "parents: \n" << parents;
 
         children = selection(parents);
