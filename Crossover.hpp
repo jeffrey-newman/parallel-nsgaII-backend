@@ -390,20 +390,25 @@ public:
 //        int count = 0;
 //        int x_count = 0;
 
-        for (int i = 0; i <= pop->size()-2; i = i + 2)
+        if (pop->size() >= 2)
         {
-//            ++count;
-            double rand = this->cross_uniform(this->random_number_gen);
-//            std::cout << rand << "\n";
-            if (rand <= probability_crossover)
+            for (int i = 0; i <= pop->size()-2; i = i + 2)
             {
+//                std::cout << "crossover ind " << i << std::endl;
+//            ++count;
+                double rand = this->cross_uniform(this->random_number_gen);
+//            std::cout << rand << "\n";
+                if (rand <= probability_crossover)
+                {
 //                ++x_count;
-                IndividualSPtr parent1 = (*pop)[i];
-                IndividualSPtr parent2 = (*pop)[i+1];
-                real_xover(*parent1, *parent2);
-                int_xover(*parent1, *parent2);
+                    IndividualSPtr parent1 = (*pop)[i];
+                    IndividualSPtr parent2 = (*pop)[i+1];
+                    real_xover(*parent1, *parent2);
+                    int_xover(*parent1, *parent2);
+                }
             }
         }
+
 
 
 //       std::cout << "Crossover: " << x_count << " of " << count << " iterations underwent: " << 100 * double(x_count) / count << "%\n";

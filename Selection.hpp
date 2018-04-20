@@ -187,9 +187,9 @@ public:
     resetBreedingPop(PopulationSPtr pop)
     {
         a1.clear();
-        for (int i = 0; i < parent_pop->populationSize(); ++i)
+        for (int i = 0; i < pop->populationSize(); ++i)
         {
-            a1.push_back((*parent_pop)[i]);
+            a1.push_back((*pop)[i]);
         }
         std::shuffle(a1.begin(), a1.end(), random_number_gen);
         pos = 0;
@@ -198,19 +198,22 @@ public:
     void
     add2BreedingPop(IndividualSPtr ind)
     {
-        std::uniform_int_distribution<int> uid(0, a1.size() - 1);
-        a1.insert(a1.begin() + uid(random_number_gen, ind));
+        std::uniform_int_distribution<int> uid(0, a1.size());
+        int loc =  uid(random_number_gen);
+        std::vector<IndividualSPtr>::iterator insert_it = a1.begin() + loc;
+        a1.insert(insert_it, ind);
+        if (pos <= loc) ++pos;
     }
 
     PopulationSPtr
     operator()(int number_selected)
     {
+        PopulationSPtr selected_pop(new Population);
         for (int i = 0; i < number_selected; ++i)
         {
-            PopulationSPtr selected_pop(new Population);
-            if (pos >= a1.size()) resortBreedingPop();
+            if (pos >= a1.size()) {resortBreedingPop(); pos = 0;}
             IndividualSPtr ind1 = a1[pos++];
-            if (pos >= a1.size()) resortBreedingPop();
+            if (pos >= a1.size()) {resortBreedingPop(); pos = 0;}
             IndividualSPtr ind2 = a1[pos++];
             selected_pop->push_back(IndividualSPtr(new Individual(*(tournament(ind1, ind2)))));
         }

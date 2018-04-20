@@ -37,7 +37,7 @@ public:
      */
     virtual
     std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, boost::filesystem::path & save_dir) = 0;
+    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, const boost::filesystem::path & save_dir) = 0;
 };
 
 class DummyObjectivesAndConstraints : public ObjectivesAndConstraintsBase
@@ -53,7 +53,7 @@ public:
     }
 
     std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, boost::filesystem::path & save_dir)
+    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, const boost::filesystem::path & save_dir)
     {
         return (dummy_return);
     };
@@ -77,7 +77,7 @@ public:
      * @param save_dir where the members of population are saved to. Make subdirectories in this folder.
      */
     virtual void
-    operator()(PopulationSPtr population, boost::filesystem::path & save_dir) = 0;
+    operator()(PopulationSPtr population, const boost::filesystem::path & save_dir) = 0;
 };
 
 class EvaluatePopulation : public EvaluatePopulationBase
@@ -101,7 +101,7 @@ public:
     }
 
     void
-    operator()(PopulationSPtr population, boost::filesystem::path & save_dir)
+    operator()(PopulationSPtr population, const boost::filesystem::path & save_dir)
     {
         int i = 0;
         for(IndividualSPtr ind: *population)

@@ -59,17 +59,18 @@ protected:
 //    Visualise do_visualise;
     PopulationSPtr parents;
     PopulationSPtr children;
-    Log do_log;
-    bool is_fstream = false;
-    std::reference_wrapper<std::ostream> log_stream;
-    boost::filesystem::path f_path;
+    int do_log;
+//    bool is_fstream = false;
+//    std::ofstream log_stream;
+//    boost::filesystem::path f_path;
     int gen_num;
     bool is_finished;
     bool save_initial_pop;
+    boost::filesystem::path log_directory;
 
 public:
 
-    NSGAII(RNG & _random_number_generator)
+    NSGAIIBase(RNG & _random_number_generator)
         : random_number_generator(_random_number_generator),
 //          default_evaluator(eval),
 //          pop_eval(default_evaluator),
@@ -78,7 +79,7 @@ public:
           parents( (Population *) NULL),
           children( (Population *) NULL),
           do_log(OFF),
-          log_stream(std::cout),
+//          log_stream(std::cout),
           gen_num(0),
           is_finished(false),
           save_initial_pop(true)
@@ -100,27 +101,22 @@ public:
         my_checkpoints.addCheckpoint(chkpnt_2_add);
     }
 
-    void
-    log(std::ostream & _stream = std::cout, Log _val = LVL1)
-    {
-        do_log = _val;
-        if (do_log > OFF)
-        {
-            is_fstream = false;
-            log_stream = _stream;
-        }
-    }
+//    virtual void
+//    log(std::ostream & _stream = std::cout, Log _val = LVL1)
+//    {
+//        do_log = _val;
+//        if (do_log > OFF)
+//        {
+//            is_fstream = false;
+//            log_stream = _stream;
+//        }
+//    }
 
-    void
-    log(std::ofstream & _stream, boost::filesystem::path _f_path, Log _val = LVL1)
+    virtual void
+    log(boost::filesystem::path _log_directory, int _val = LVL1)
     {
         do_log = _val;
-        if (do_log > OFF)
-        {
-            is_fstream = true;
-            f_path = _f_path;
-            log_stream = _stream;
-        }
+        this->log_directory = _log_directory;
     }
 
     MutationBase<RNG> &
@@ -143,12 +139,12 @@ public:
         return  (parents);
     }
 
-    PopulationSPtr
-    step(PopulationSPtr _initial_pop)
-    {
-        this->initialise(_initial_pop);
-        return(this->step());
-    }
+//    PopulationSPtr
+//    step(PopulationSPtr _initial_pop)
+//    {
+//        this->initialise(_initial_pop);
+//        return(this->step());
+//    }
 
     PopulationSPtr
     run()
@@ -169,9 +165,9 @@ public:
     }
 
     void
-    initialiseWithPop(PopulationSPtr _initial_pop)
+    initialiseWithPop(PopulationSPtr _initial_pop, boost::filesystem::path save_dir = "", std::string file_name_prefix = "initial_pop")
     {
-        this->initialise(_initial_pop);
+        this->initialise(_initial_pop, save_dir, file_name_prefix);
     }
 
     bool
@@ -238,18 +234,18 @@ public:
 
 private:
 
-    void
-    initialise(PopulationSPtr _parents)
-    {
-        if (do_log > OFF)  log_stream.get() << "Initialising GA: \n";
-        gen_num = 0;
-        is_finished = false;
-        parents = _parents;
-        pop_eval(parents);
-        if (do_log > OFF)  log_stream.get() << "Initial population: \n" << parents;
-        parents->calcFronts();
-
-    }
+    virtual void
+    initialise(PopulationSPtr _parents, boost::filesystem::path save_dir = "", std::string file_name_prefix = "") = 0;
+//    {
+//        if (do_log > OFF)  log_stream.get() << "Initialising GA: \n";
+//        gen_num = 0;
+//        is_finished = false;
+//        parents = _parents;
+//        pop_eval(parents);
+//        if (do_log > OFF)  log_stream.get() << "Initial population: \n" << parents;
+//        parents->calcFronts();
+//
+//    }
 
     virtual bool
     step_impl() = 0;
