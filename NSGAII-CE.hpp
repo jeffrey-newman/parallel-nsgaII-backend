@@ -93,7 +93,7 @@ private:
         this->gen_num = 0;
         this->is_finished = false;
         this->parents = _parents;
-        if (save_dir.string() == "")
+        if (save_dir.string().empty())
         {
             this->pop_eval(this->parents);
         }

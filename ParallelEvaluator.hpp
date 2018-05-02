@@ -43,6 +43,9 @@ protected:
     int do_log;
     int gen_num = 0;
     boost::filesystem::path log_directory;
+    bool delete_previous_logfile = true;
+    boost::filesystem::path previous_log_file = "";
+    boost::filesystem::path log_file = "";
 //    std::ofstream log_stream;
     std::time_t timeout_time;
     const std::string NO_SAVE = "no_save";
@@ -195,7 +198,7 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_eval_server_term.log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            log_file = this->log_directory / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -215,7 +218,7 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_eval_server" + std::to_string(this->gen_num) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            this->log_file = this->log_directory / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -281,6 +284,17 @@ public:
             if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
             world.isend(client_id, max_tag, dv_c);
         }
+
+        if (this->do_log)
+        {
+            if (logging_file.is_open()) logging_file.close();
+        }
+
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
     }
     
     void
@@ -312,8 +326,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_pop_server_nonblock_term.log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
         // Send signal to slaves to indicate shutdown.
@@ -336,8 +350,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_gen" + std::to_string(++this->gen_num) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -511,6 +525,12 @@ public:
             if (logging_file.is_open()) logging_file.close();
         }
 
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
+
     }
 
     void
@@ -547,8 +567,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock" + std::to_string(++this->gen_num) + std::string(".log");
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -650,6 +670,12 @@ public:
         {
             if (logging_file.is_open()) logging_file.close();
         }
+
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
     }
 };
 
@@ -671,8 +697,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + std::to_string(++this->gen_num) + std::string(".log");
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -763,6 +789,12 @@ public:
         {
             if (logging_file.is_open()) logging_file.close();
         }
+
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
     }
 };
 
@@ -805,8 +837,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_term.log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -882,8 +914,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_breedeval" + std::to_string(++this->breed_and_eval_count) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -981,6 +1013,13 @@ public:
         {
             if (logging_file.is_open()) logging_file.close();
         }
+
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
+
         return(offspring);
     }
 
@@ -1029,8 +1068,8 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_evalsave" + std::to_string(++this->eval_and_save_count) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+            this->log_file = this->log_directory / file_name;
+            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
 
@@ -1247,6 +1286,12 @@ public:
             if (logging_file.is_open()) logging_file.close();
         }
 
+        if (this->do_log)
+        {
+            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+            this->previous_log_file = this->log_file;
+        }
+
     }
 
 
@@ -1299,8 +1344,8 @@ public:
             {
                 if (logging_file.is_open()) logging_file.close();
                 std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock_ce_gen" + std::to_string(++this->gen_num) + std::string(".log");
-                boost::filesystem::path log_file = this->log_directory / file_name;
-                logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+                this->log_file = this->log_directory / file_name;
+                logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
                 if (!logging_file.is_open()) this->do_log = this->OFF;
             }
 
@@ -1432,6 +1477,17 @@ public:
                         jobs.pop();
                     }
 
+                }
+
+                if (this->do_log)
+                {
+                    if (logging_file.is_open()) logging_file.close();
+                }
+
+                if (this->do_log)
+                {
+                    if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+                    this->previous_log_file = this->log_file;
                 }
             }
 
