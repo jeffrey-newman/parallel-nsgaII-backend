@@ -120,6 +120,7 @@ private:
 
     std::vector<IndividualSPtr> a1, a2;
     int pos;
+    bool only_add_nondom_2_breed_pop;
 
 
     IndividualSPtr
@@ -167,7 +168,8 @@ public:
         seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
         default_rng_selection(seed_selection),
         random_number_gen(default_rng_selection),
-        pos(0)
+        pos(0),
+        only_add_nondom_2_breed_pop(true)
     {
 
     }
@@ -178,7 +180,8 @@ public:
         seed_selection(std::chrono::system_clock::now().time_since_epoch().count()),
         default_rng_selection(seed_selection),
         random_number_gen(rng),
-        pos(0)
+        pos(0),
+        only_add_nondom_2_breed_pop(true)
     {
 
     }
@@ -196,13 +199,35 @@ public:
     }
 
     void
-    add2BreedingPop(IndividualSPtr ind)
+    add2BreedingPop(IndividualSPtr new_ind)
     {
-        std::uniform_int_distribution<int> uid(0, a1.size());
-        int loc =  uid(random_number_gen);
-        std::vector<IndividualSPtr>::iterator insert_it = a1.begin() + loc;
-        a1.insert(insert_it, ind);
-        if (pos <= loc) ++pos;
+        if (only_add_nondom_2_breed_pop)
+        {
+            //Test whether nondominated.
+            for(IndividualSPtr current_ind: a1)
+            {
+                if (Comparator::whichDominates(new_ind, current_ind) == 1)
+                {
+                    //Then we add. then return.
+                    std::uniform_int_distribution<int> uid(0, a1.size());
+                    int loc =  uid(random_number_gen);
+                    std::vector<IndividualSPtr>::iterator insert_it = a1.begin() + loc;
+                    a1.insert(insert_it, new_ind);
+                    if (pos <= loc) ++pos;
+                    return;
+                }
+            }
+        }
+        else
+        {
+            std::uniform_int_distribution<int> uid(0, a1.size());
+            int loc =  uid(random_number_gen);
+            std::vector<IndividualSPtr>::iterator insert_it = a1.begin() + loc;
+            a1.insert(insert_it, new_ind);
+            if (pos <= loc) ++pos;
+            return;
+        }
+
     }
 
     PopulationSPtr
