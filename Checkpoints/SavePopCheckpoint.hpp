@@ -60,10 +60,14 @@ private:
     savePop(PopulationSPtr population)
     {
         boost::filesystem::path save_file = save_path / ("pop_gen" + std::to_string(gen_number) + ".xml");
-        std::ofstream ofs(save_file.c_str());
-        assert(ofs.good());
-        boost::archive::xml_oarchive oa(ofs);
-        oa << BOOST_SERIALIZATION_NVP(population);
+        print(*population, save_file);
+        save_file = save_path / ("pop_gen" + std::to_string(gen_number) + ".txt");
+        print(*population, save_file);
+//        std::ofstream ofs(save_file.c_str());
+//        assert(ofs.good());
+//        boost::archive::xml_oarchive oa(ofs);
+//        oa << BOOST_SERIALIZATION_NVP(population);
+        
     }
 };
 
