@@ -59,6 +59,22 @@ public:
         this->do_log = _val;
         this->log_directory = _log_directory;
         this->pop_eval.log(_log_directory, _val);
+
+        boost::filesystem::path nsgaii_ce_log_dir = this->log_directory / "NSGAII_CE_Logs";
+        if (!(boost::filesystem::exists(nsgaii_ce_log_dir)))
+        {
+            try
+            {
+                boost::filesystem::create_directories(nsgaii_ce_log_dir);
+//                std::cout << "path " << path.first << " did not exist, so created\n";
+            }
+            catch(boost::filesystem::filesystem_error& e)
+            {
+                std::cout << "Attempted to create " << nsgaii_ce_log_dir.string().c_str() << " but was unable\n";
+                std::cout << e.what() << "\n";
+            }
+        }
+
     }
 
 //    virtual void
@@ -84,7 +100,7 @@ private:
         if (this->do_log)
         {
             std::string file_name = "nsgaii_ce_initialise.log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            boost::filesystem::path log_file = this->log_directory / "NSGAII_CE_Logs" / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -112,7 +128,7 @@ private:
         if (this->do_log)
         {
             std::string file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num + 1) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            boost::filesystem::path log_file = this->log_directory / "NSGAII_CE_Logs" / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -131,6 +147,19 @@ private:
 
         if (this->do_log)
         {
+            if (this->gen_num > 3)
+            {
+                std::string previous_file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num - 3) + ".log";
+                boost::filesystem::path previous_log_file_path =  this->log_directory / "NSGAII_CE_Logs" / previous_file_name;
+                try
+                {
+                    if (boost::filesystem::exists(previous_log_file_path)) boost::filesystem::remove(previous_log_file_path);
+                }
+                catch(...)
+                {
+                    if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Unsuccessful remove of old log file in NSGAII CE\n";
+                }
+            }
             if (logging_file.is_open()) logging_file.close();
         }
 

@@ -837,7 +837,23 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_term.log";
-            this->log_file = this->log_directory / file_name;
+            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
+            if (!(boost::filesystem::exists(log_file)))
+            {
+                try
+                {
+                    boost::filesystem::create_directories(log_file);
+//                    std::cout << "path " << path.first << " did not exist, so created\n";
+                }
+                catch(boost::filesystem::filesystem_error& e)
+                {
+                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
+                    std::cout << e.what() << "\n";
+//                    this->do_log = false;
+                    this->log_file = this->log_directory;
+                }
+            }
+            this->log_file = this->log_file / file_name;
             logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -914,7 +930,23 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_breedeval" + std::to_string(++this->breed_and_eval_count) + ".log";
-            this->log_file = this->log_directory / file_name;
+            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
+            if (!(boost::filesystem::exists(log_file)))
+            {
+                try
+                {
+                    boost::filesystem::create_directories(log_file);
+//                    std::cout << "path " << path.first << " did not exist, so created\n";
+                }
+                catch(boost::filesystem::filesystem_error& e)
+                {
+                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
+                    std::cout << e.what() << "\n";
+//                    this->do_log = false;
+                    this->log_file = this->log_directory;
+                }
+            }
+            this->log_file = this->log_file / file_name;
             logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -1068,7 +1100,23 @@ public:
         if (this->do_log)
         {
             std::string file_name = "parallel_evaluate_server_nonblock_ce_evalsave" + std::to_string(++this->eval_and_save_count) + ".log";
-            this->log_file = this->log_directory / file_name;
+            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
+            if (!(boost::filesystem::exists(log_file)))
+            {
+                try
+                {
+                    boost::filesystem::create_directories(log_file);
+//                    std::cout << "path " << path.first << " did not exist, so created\n";
+                }
+                catch(boost::filesystem::filesystem_error& e)
+                {
+                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
+                    std::cout << e.what() << "\n";
+//                    this->do_log = false;
+                    this->log_file = this->log_directory;
+                }
+            }
+            this->log_file = this->log_file / file_name;
             logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
         }
@@ -1344,7 +1392,23 @@ public:
             {
                 if (logging_file.is_open()) logging_file.close();
                 std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock_ce_gen" + std::to_string(++this->gen_num) + std::string(".log");
-                this->log_file = this->log_directory / file_name;
+                this->log_file = this->log_directory / "ParallelEvaluateClientLogs";
+                if (!(boost::filesystem::exists(log_file)))
+                {
+                    try
+                    {
+                        boost::filesystem::create_directories(log_file);
+//                    std::cout << "path " << path.first << " did not exist, so created\n";
+                    }
+                    catch(boost::filesystem::filesystem_error& e)
+                    {
+                        std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
+                        std::cout << e.what() << "\n";
+//                    this->do_log = false;
+                        this->log_file = this->log_directory;
+                    }
+                }
+                this->log_file = this->log_file / file_name;
                 logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
                 if (!logging_file.is_open()) this->do_log = this->OFF;
             }
