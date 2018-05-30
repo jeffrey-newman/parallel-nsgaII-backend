@@ -509,8 +509,9 @@ public:
             //Process received job
             if (s_results.tag() < population->size())
             {
-                if ( ((*population)[s_results.tag()]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
-                    &&  ((*population)[s_results.tag()]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
+                    &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                 {
                     (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
                     (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
@@ -526,6 +527,7 @@ public:
         boost::optional<boost::mpi::status> os;
         do
         {
+            if (results_received == population->size()) break;
             os = waitForJobToFinish(logging_file);
             if (os)
             {
@@ -535,13 +537,14 @@ public:
                 //Process received job
                 if (s_results.tag() < population->size())
                 {
-                    if ( ((*population)[s_results.tag()]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
-                        &&  ((*population)[s_results.tag()]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                    if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
+                        &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                        // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                     {
                         (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
                         (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
                         ++results_received;
-                        if (results_received == population->size()) break;
+
                     }
                 }
             }
