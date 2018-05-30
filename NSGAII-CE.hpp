@@ -11,6 +11,7 @@
 
 #include "NSGAII-base.hpp"
 #include "ParallelEvaluator.hpp"
+#include <boost/asio.hpp>
 
 
 //enum Visualise{ON, OFF};
@@ -127,7 +128,7 @@ private:
         std::ofstream logging_file;
         if (this->do_log)
         {
-            std::string file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num + 1) + ".log";
+            std::string file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num + 1) + "_" + boost::asio::ip::host_name() + ".log";
             boost::filesystem::path log_file = this->log_directory / "NSGAII_CE_Logs" / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
             if (!logging_file.is_open()) this->do_log = this->OFF;
@@ -149,7 +150,7 @@ private:
         {
             if (this->gen_num > 3)
             {
-                std::string previous_file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num - 3) + ".log";
+                std::string previous_file_name = "nsgaii_ce_gen" + std::to_string(this->gen_num - 3) + "_" + boost::asio::ip::host_name() + ".log";
                 boost::filesystem::path previous_log_file_path =  this->log_directory / "NSGAII_CE_Logs" / previous_file_name;
                 try
                 {

@@ -67,7 +67,7 @@ private:
 //        assert(ofs.good());
 //        boost::archive::xml_oarchive oa(ofs);
 //        oa << BOOST_SERIALIZATION_NVP(population);
-        
+
     }
 };
 

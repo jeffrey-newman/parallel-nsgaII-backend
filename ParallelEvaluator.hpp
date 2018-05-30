@@ -15,14 +15,68 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
+#include "serialize-tuple-master/serialize_tuple.h"
 #include <boost/date_time.hpp>
+#include <boost/asio.hpp>
 #include <functional>
 #include <queue>
+#include <set>
 #include <unordered_map>
 #include "Selection.hpp"
 #include "Crossover.hpp"
 #include "Mutation.hpp"
 
+
+namespace{
+
+inline std::ostream& operator << (std::ostream& os, const std::tuple<int, std::vector<double>, std::vector<int> >& v)
+{
+    os << "[";
+    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << "; ";
+    for (std::vector<int>::const_iterator ii = std::get<2>(v).begin(); ii != std::get<2>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << " ] : Gen " << std::get<0>(v);
+    return os;
+}
+
+inline std::ostream& operator << (std::ostream& os, const std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> >& v)
+{
+    os << "(";
+    for (std::vector<double>::const_iterator ii = std::get<0>(v).begin(); ii != std::get<0>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << "; ";
+    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << " ) <- ";
+
+    os << "[";
+    for (std::vector<double>::const_iterator ii = std::get<3>(v).begin(); ii != std::get<3>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << "; ";
+    for (std::vector<int>::const_iterator ii = std::get<4>(v).begin(); ii != std::get<4>(v).end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << " ] : Gen " << std::get<2>(v);
+    return os;
+}
+
+
+
+
+}
 
 class ParallelEvaluatorBase
 {
@@ -34,11 +88,17 @@ protected:
     ProblemDefinitionsSPtr problem_defs;
     int number_processes;
     int number_clients;
-    std::pair<std::vector<double>, std::vector<int> > decision_vars;
-    std::pair<std::vector<double>, std::vector<double> > objs_and_constraints;
+//    std::pair<std::vector<double>, std::vector<int> > decision_vars;
+//    std::tuple<std::vector<double>, std::vector<int>, std::vector<int> > decision_vars2;
+//    std::pair<std::vector<double>, std::vector<double> > objs_and_constraints;
+    std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> > objs_constraints_gen_num_dvs;
+    std::tuple<int, std::vector<double>, std::vector<int> > gen_number_dvs;
     std::pair<std::vector<double>, std::vector<double> > worst_objs_and_constraints;
-    boost::mpi::content dv_c;
-    boost::mpi::content oc_c;
+    std::pair<std::string, int> save_dir_gen_nmbr;
+//    boost::mpi::content dv_c;
+//    boost::mpi::content oc_c;
+//    boost::mpi::content ocgndv_c;
+//    boost::mpi::content gndv_c;
     int max_tag;
     int do_log;
     int gen_num = 0;
@@ -83,6 +143,51 @@ public:
         this->log_directory= _log_directory;
     }
 
+    void
+    makeLogFile(std::ofstream &logging_file, std::string & base_log_file_name, int _gen_count, std::string subdir_name)
+    {
+        std::string file_name = base_log_file_name;
+        if (_gen_count >= 0) file_name = file_name + "_" + std::to_string(
+                _gen_count);
+        file_name = file_name + "_" + boost::asio::ip::host_name() + "_Rank" + std::to_string(world.rank()) + ".log";
+
+        log_file = log_directory / subdir_name;
+        if (!(exists(log_file)))
+        {
+            try
+            {
+                create_directories(log_file);
+//                    std::cout << "path " << path.first << " did not exist, so created\n";
+            }
+            catch(boost::filesystem::filesystem_error& e)
+            {
+                std::cout << "Attempted to create " << log_file.string().c_str() << " but was unable\n";
+                std::cout << e.what() << "\n";
+//                    this->do_log = false;
+                log_file = log_directory;
+            }
+        }
+
+        log_file = log_file / file_name;
+        logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::app);
+        if (!logging_file.is_open()) do_log = OFF;
+    }
+
+    void
+    deletePreviousLog(std::string & base_log_file_name, int _gen_count, std::string subdir_name)
+    {
+        std::string file_name = base_log_file_name;
+        if (_gen_count >= 0) file_name = file_name + "_" + std::to_string(
+                _gen_count);
+        file_name = file_name + "_" + boost::asio::ip::host_name() + ".log";
+
+        previous_log_file = log_directory / subdir_name /file_name ;
+        if (this->delete_previous_logfile && !this->previous_log_file.empty())
+        {
+            if (exists(previous_log_file)) boost::filesystem::remove_all(previous_log_file);
+        }
+    }
+
 };
 
 class ParallelEvaluatorClientBase : public ParallelEvaluatorBase
@@ -93,20 +198,31 @@ public:
     {
 //        std::cout << "receiving broadcast skeleton" << std::endl;
         //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
-        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
+//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
+//        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_constraints_gen_num_dvs),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(gen_number_dvs),0);
 
 //        std::cout << "Getting content for skeleton" << std::endl;
-        dv_c = boost::mpi::get_content(decision_vars);
-        oc_c = boost::mpi::get_content(objs_and_constraints);
+//        dv_c = boost::mpi::get_content(decision_vars);
+//        oc_c = boost::mpi::get_content(objs_and_constraints);
+//        ocgndv_c = boost::mpi::get_content(objs_constraints_gen_num_dvs);
+//        gndv_c  = boost::mpi::get_content(gen_number_dvs);
 //        std::cout << "Completed initialisation Client" << std::endl;
     }
 
     virtual void operator()()=0;
+
 };
 
 class ParallelEvaluatorSeverBase : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
+private:
+    typedef std::tuple<int, std::vector<double>, std::vector<int> > JobsSentInfo; //first is gen number, then DVs.
+    typedef std::list<std::tuple<boost::mpi::request, int,  JobsSentInfo> > JobsSentList; //First is mpi_request, 2nd is job number, 3rd is tuple of objs, constraints, gen_num and decision vars
+    JobsSentList jobs_sending;
+    const int MAX_JOB_NUM = std::numeric_limits<int>::max()-2;
+
 public:
     ParallelEvaluatorSeverBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs)
@@ -121,169 +237,323 @@ public:
 //        std::cout << "Objs: " << problem_defs->minimise_or_maximise.size() << std::endl;
 //        std::cout << "Constraints: " << problem_defs->number_constraints << std::endl;
 
-        decision_vars = std::pair<std::vector<double>, std::vector<int> >
-            (   std::piecewise_construct,
-                std::forward_as_tuple(std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0)),
-                std::forward_as_tuple(std::vector<int>(problem_defs->int_lowerbounds.size(), 0))
-            );
+//    std::get<0>(decision_vars
 
-        objs_and_constraints = std::pair<std::vector<double>, std::vector<double> >
-            (   std::piecewise_construct,
-                std::forward_as_tuple(std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0)),
-                std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
-            );
+//        decision_vars = std::pair<std::vector<double>, std::vector<int> >
+//            (   std::piecewise_construct,
+//                std::forward_as_tuple(std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0)),
+//                std::forward_as_tuple(std::vector<int>(problem_defs->int_lowerbounds.size(), 0))
+//            );
+//
+//        objs_and_constraints = std::pair<std::vector<double>, std::vector<double> >
+//            (   std::piecewise_construct,
+//                std::forward_as_tuple(std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0)),
+//                std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
+//            );
+
+        std::get<0>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0);
+        std::get<1>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->number_constraints, 0.0);
+        std::get<2>(objs_constraints_gen_num_dvs) = 0;
+        std::get<3>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0);
+        std::get<4>(objs_constraints_gen_num_dvs) = std::vector<int>(problem_defs->int_lowerbounds.size(), 0);
+
+        std::get<0>(gen_number_dvs) = 0;
+        std::get<1>(gen_number_dvs) = std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0);
+        std::get<2>(gen_number_dvs) = std::vector<int>(problem_defs->int_lowerbounds.size(), 0);
+
 
 //        std::cout << "Broadcasting skeleton" << std::endl;
-        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
+//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
+//        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_constraints_gen_num_dvs),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(gen_number_dvs),0);
 
 //        std::cout << "Getting content for skeleton" << std::endl;
-        dv_c = boost::mpi::get_content(decision_vars);
-        oc_c = boost::mpi::get_content(objs_and_constraints);
+//        dv_c = boost::mpi::get_content(decision_vars);
+//        oc_c = boost::mpi::get_content(objs_and_constraints);
+//        ocgndv_c = boost::mpi::get_content(objs_constraints_gen_num_dvs);
+//        gndv_c  = boost::mpi::get_content(gen_number_dvs);
+
 //        std::cout << "Completed initialisation Server" << std::endl;
-    }
-};
-
-namespace{
-
-
-    inline std::ostream& operator << (std::ostream& os, const std::pair<std::vector<double>, std::vector<int> >& v)
-    {
-        os << "[";
-        for (std::vector<double>::const_iterator ii = v.first.begin(); ii != v.first.end(); ++ii)
-        {
-            os << " " << *ii;
-        }
-        for (std::vector<int>::const_iterator ii = v.second.begin(); ii != v.second.end(); ++ii)
-        {
-            os << " " << *ii;
-        }
-        os << " ]";
-        return os;
-    }
-
-
-    inline std::ostream& operator << (std::ostream& os, const std::pair<std::vector<double>, std::vector<double> >& v)
-    {
-        os << "[";
-        for (std::vector<double>::const_iterator ii = v.first.begin(); ii != v.first.end(); ++ii)
-        {
-            os << " " << *ii;
-        }
-        for (std::vector<double>::const_iterator ii = v.second.begin(); ii != v.second.end(); ++ii)
-        {
-            os << " " << *ii;
-        }
-        os << " ]";
-        return os;
-    }
-
-}
-
-
-
-class ParallelEvaluatePopServer : public ParallelEvaluatorSeverBase
-{
-    
-public:
-    ParallelEvaluatePopServer(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
-    : ParallelEvaluatorSeverBase(_mpi_env, _world, _problem_defs)
-    {
-
-    }
-    
-    ~ParallelEvaluatePopServer()
-    {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_eval_server_term.log";
-            log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-        // Send signal to slaves to indicate shutdown.
-//        std::cout << "In destructor" << std::endl;
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending terminate" << std::endl;
-        std::string terminate = TERMINATE;
-        boost::mpi::broadcast(world, terminate,0);
     }
 
     void
-    evalPop(PopulationSPtr population, boost::filesystem::path save_dir)
+    terminate()
     {
-
+        std::string base_log_file_name = "ParallelEvaluatePopServer_Termination";
+        std::string log_subdir = "ParallelEvaluateServerLogs";
         std::ofstream logging_file;
         if (this->do_log)
         {
-            std::string file_name = "parallel_eval_server" + std::to_string(this->gen_num) + ".log";
-            this->log_file = this->log_directory / file_name;
-            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
+            makeLogFile(logging_file, base_log_file_name, -1, log_subdir);
+        }
+        // Send signal to slaves to indicate shutdown.
+//        std::cout << "In destructor" << std::endl;
+
+        std::vector<boost::mpi::request> term_msg_rqsts;
+        for (int i = 1; i <= number_clients; ++i)
+        {
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending terminate to " << i << std::endl;
+            term_msg_rqsts.push_back(world.isend(i, max_tag, TERMINATE));
+        }
+        boost::mpi::wait_all(term_msg_rqsts.begin(), term_msg_rqsts.end());
+
+        deleteAllJobs(logging_file);
+
+        if (this->do_log > this->OFF)
+        {
+            if (logging_file.is_open()) logging_file.close();
+        }
+    }
+
+
+
+    void
+    sendJob(int _gen_num, const std::vector<double> & real_dvs, const std::vector<int>& int_dvs, int & job_num, int client_id, std::ofstream & logging_file)
+    {
+        job_num += 1;
+
+        std::get<0>(gen_number_dvs) = _gen_num;
+        std::get<1>(gen_number_dvs) = real_dvs;
+        std::get<2>(gen_number_dvs) = int_dvs;
+
+        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << job_num << " with " << real_dvs.size() << ", " << int_dvs.size() << " DVS: " << gen_number_dvs << std::endl;
+        boost::mpi::request rq;
+        jobs_sending.push_front(std::make_tuple(rq, job_num, gen_number_dvs));
+        std::tuple<boost::mpi::request, int,  JobsSentInfo> & job = jobs_sending.front();
+            std::get<0>(job) = world.isend(client_id, std::get<1>(job), boost::mpi::get_content(std::get<2>(job)));
+
+        if (job_num > max_tag - 3) job_num = 0;
+
+    }
+
+    void
+    checkJobsSent(std::ofstream & logging_file)
+    {
+        // Test sends back, and remove those completed.
+        boost::optional<boost::mpi::status> os;
+        do{
+            os = boost::optional<boost::mpi::status>();
+            if (!jobs_sending.empty())
+            {
+                std::tuple<boost::mpi::request, int,  JobsSentInfo> & job_sending = jobs_sending.back();
+                os = std::get<0>(job_sending).test();
+                if (os)
+                {
+                    if (this->do_log > this->OFF)
+                        logging_file <<  world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " individual/job number " << std::get<1>(job_sending) << " now sent" << std::endl;
+                    jobs_sending.pop_back();
+                }
+            }
+        } while (os);
+    }
+
+    void
+    deleteOldJobs(std::ofstream & logging_file, int old_gen_number)
+    {
+        // Test sends back, and remove those completed.
+        boost::optional<boost::mpi::status> os;
+        bool do_continue = false;
+        do{
+            do_continue = false;
+            if (!jobs_sending.empty())
+            {
+                std::tuple<boost::mpi::request, int,  JobsSentInfo> & job_sending = jobs_sending.back();
+                os = std::get<0>(job_sending).test();
+                if (os)
+                {
+                    if (this->do_log > this->OFF)
+                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                     << " individual/job number " << std::get<1>(job_sending) << "now sent" << std::endl;
+                    jobs_sending.pop_back();
+                    do_continue = true;
+                }
+                else
+                {
+                    if (std::get<0>(std::get<2>(job_sending)) < old_gen_number)
+                    {
+                        if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Cancelling job " << std::get<1>(job_sending) << " from generation " << std::get<0>(std::get<2>(job_sending)) << ". Job is too old." << std::endl;
+                        std::get<0>(job_sending).cancel();
+                        jobs_sending.pop_back();
+                        do_continue = true;
+                    }
+                }
+            }
+        } while (do_continue);
+    }
+
+    void
+    deleteAllJobs(std::ofstream & logging_file)
+    {
+        if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Clearing previously sent jobs" << std::endl;
+        for(std::tuple<boost::mpi::request, int,  JobsSentInfo> & job: jobs_sending)
+        {
+            // Failed jobs.
+            boost::optional<boost::mpi::status> oss = std::get<0>(job).test();
+            if (!oss)
+            {
+                std::get<0>(job).cancel();
+            }
+            else
+            {
+                if (this->do_log > this->OFF)
+                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                 << " individual/job number " << std::get<1>(job) << "now sent" << std::endl;
+            }
+        }
+        jobs_sending.clear();
+    }
+
+    boost::optional<boost::mpi::status>
+    waitForJobToFinish(std::ofstream & logging_file, int job_id = boost::mpi::any_tag)
+    {
+        //start a receive request, non-blocking
+        boost::mpi::request r = world.irecv(boost::mpi::any_source, job_id, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+        //get start time
+        std::time_t start_time, end_time;
+        std::time(&start_time);
+        int elapsed_time = 0;
+        boost::optional<boost::mpi::status> osr;
+        // test if we have made a receive.
+        do
+        {
+            std::time(&end_time);
+            elapsed_time = std::difftime(end_time, start_time);
+            osr = r.test();
+
+        }
+        while(!osr && elapsed_time < this->timeout_time);
+
+        //By now we either have received the data, or taken too long, so...
+        if (!osr)
+        {
+            //we must have timed out
+            if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Cancelling job " << job_id << " after waiting " << elapsed_time << " seconds." << std::endl;
+            r.cancel();
         }
 
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " Broadcasting save directory: " << save_dir << std::endl;
-        std::string save_dir_s = save_dir.string();
-        boost::mpi::broadcast(world, save_dir_s,0);
+        return osr;
+    }
+
+    void
+    evalAndSavePopImpl(PopulationSPtr population, const boost::filesystem::path & save_dir, int _gen_num)
+    {
+        std::ofstream logging_file;
+        std::string base_log_file_name = "ParallelEvaluatePopServer_EvalSave";
+        std::string log_subdir = "ParallelEvaluateServerLogs";
+        if (this->do_log)
+        {
+            makeLogFile(logging_file, base_log_file_name, _gen_num, log_subdir);
+        }
+
+
+        if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Eval (and save) population" << std::endl;
+
+        save_dir_gen_nmbr.first = save_dir.string();
+        save_dir_gen_nmbr.second = _gen_num;
+
+        std::vector<boost::mpi::request> save_dir_msg_rqsts;
+        for (int i = 1; i <= number_clients; ++i)
+        {
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << i << " save directory: " << save_dir << " and generational number: " << _gen_num << std::endl;
+            save_dir_msg_rqsts.push_back(world.isend(i, max_tag, save_dir_gen_nmbr));
+        }
+
+        if (this->do_log > this->OFF) logging_file << "First defaulting obj and constraints of all population members to worse case values" << std::endl;
+        for (IndividualSPtr ind: *population)
+        {
+            ind->setObjectives(this->worst_objs_and_constraints.first);
+            ind->setConstraints(this->worst_objs_and_constraints.second);
+        }
 
         if (this->do_log > this->OFF) logging_file << "Evaluating population with size: " << population->size() << std::endl;
 
         //Sanity check - that we can represent each individual by an mpi tag.
-        if (population->populationSize() > (max_tag - 1))
+        if (population->populationSize() > (max_tag -1))
         {
             if (this->do_log > this->OFF) logging_file << "problem: max tag too small, population too large for mpi" << std::endl;
         }
 
+        deleteAllJobs(logging_file);
+
         int individual = 0;
-        std::vector<boost::mpi::request> reqs_out(number_clients);
-        if (this->do_log > this->OFF) logging_file << "Evaluating population using " << number_clients << std::endl;
+//        std::vector<boost::mpi::request> reqs_out(number_clients);
         int num_initial_jobs = number_clients;
         if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
-        for (; individual < num_initial_jobs; ++individual)
+        for (; individual < num_initial_jobs; )
         {
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " << "Evaluating individual " << individual << std::endl;
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
+            // sendJob increments 'indivudal'
             int client_id = individual + 1;
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with "  << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVs: " << decision_vars << std::endl;
-            world.send(client_id, individual, dv_c);
+            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getIntDVVector(), individual, client_id, logging_file);
         }
-//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
+
+        //Check messages have all been sent
+        boost::mpi::wait_all(save_dir_msg_rqsts.begin(), save_dir_msg_rqsts.end());
+        save_dir_msg_rqsts.clear();
+
+        checkJobsSent(logging_file);
+        int results_received = 0;
 
         while (individual < population->populationSize())
         {
-            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+            //start a receive request, non-blocking
+            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+            boost::mpi::status s_results = r_results.wait();
+            int client_id = s_results.source();
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
 
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVs: " << decision_vars << std::endl;
-            world.send(s.source(), individual, dv_c);
+            // Send out new job.
+            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getIntDVVector(), individual, client_id, logging_file);
 
-            ++individual;
+            //Process received job
+            if (s_results.tag() < population->size())
+            {
+                if ( ((*population)[s_results.tag()]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
+                    &&  ((*population)[s_results.tag()]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                {
+                    (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
+                    (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                    ++results_received;
+                }
+            }
+            // sendJob increments 'indivudal'
+//            ++individual;
+            checkJobsSent(logging_file);
         }
 
-        for (int i = 0; i < number_clients; ++i)
+        //Try and get a receive from remaining jobs still running
+        boost::optional<boost::mpi::status> os;
+        do
         {
-            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+            os = waitForJobToFinish(logging_file);
+            if (os)
+            {
+                boost::mpi::status s_results = os.get();
+                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s_results.source() << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
 
+                //Process received job
+                if (s_results.tag() < population->size())
+                {
+                    if ( ((*population)[s_results.tag()]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
+                        &&  ((*population)[s_results.tag()]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                    {
+                        (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
+                        (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                        ++results_received;
+                        if (results_received == population->size()) break;
+                    }
+                }
+            }
+        } while (os);
 
-//            world.send(s.source(), max_tag, dv_c);
-        }
-
-        for (int i = 0; i < number_clients; ++i)
+        for (int j = 0; j < results_received; ++j)
         {
-            int client_id = i + 1;
-//            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
-            world.isend(client_id, max_tag, dv_c);
+            //start a receive request, non-blocking
+
         }
+
+        deleteAllJobs(logging_file);
 
         if (this->do_log)
         {
@@ -292,23 +562,17 @@ public:
 
         if (this->do_log)
         {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
+            if (_gen_num>3) deletePreviousLog(base_log_file_name, _gen_num-3, log_subdir);
         }
-    }
-    
-    void
-    operator()(PopulationSPtr population)
-    {
-        this->evalPop(population, NO_SAVE);
+
     }
 
-    void
-    operator()(PopulationSPtr population, boost::filesystem::path & save_dir)
-    {
-        this->evalPop(population, save_dir);
-    }
 };
+
+
+
+
+
 
 class ParallelEvaluatePopServerNonBlocking : public ParallelEvaluatorSeverBase
 {
@@ -322,215 +586,14 @@ public:
 
     ~ParallelEvaluatePopServerNonBlocking()
     {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_pop_server_nonblock_term.log";
-            this->log_file = this->log_directory / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-        // Send signal to slaves to indicate shutdown.
-//        std::cout << "In destructor" << std::endl;
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending terminate" << std::endl;
-        std::string terminate = TERMINATE;
-        boost::mpi::broadcast(world, terminate,0);
-
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
+        terminate();
     }
 
     void
     evalPop(PopulationSPtr population, boost::filesystem::path save_dir)
     {
-
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_server_nonblock_gen" + std::to_string(++this->gen_num) + ".log";
-            this->log_file = this->log_directory / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " Broadcasting save directory: " << save_dir << std::endl;
-        std::string save_dir_s = save_dir.string();
-        boost::mpi::broadcast(world, save_dir_s,0);
-
-        if (this->do_log > this->OFF) logging_file << "Evaluating population with size: " << population->size() << std::endl;
-
-        //Sanity check - that we can represent each individual by an mpi tag.
-        if (population->populationSize() > (max_tag - 1))
-        {
-            if (this->do_log > this->OFF) logging_file << "problem: max tag too small, population too large for mpi" << std::endl;
-        }
-
-        typedef std::pair<const int, boost::mpi::request> JobRunningT;
-        std::map<int, boost::mpi::request> jobs_running;
-
-        int individual = 0;
-//        std::vector<boost::mpi::request> reqs_out(number_clients);
-        int num_initial_jobs = number_clients;
-        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
-        for (; individual < num_initial_jobs; ++individual)
-        {
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
-            int client_id = individual + 1;
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-            jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
-        }
-
-        // keep jobs out there for slave eficiency (so queue an additional job for each slave)
-        int num_additional_jobs = number_clients;
-        if ((num_additional_jobs + num_initial_jobs) > population->populationSize()) num_additional_jobs = population->populationSize() - num_initial_jobs;
-        for (int i = 0; i < num_additional_jobs; ++i)
-        {
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
-            int client_id = individual + 1 - num_initial_jobs;
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-            jobs_running.insert(std::make_pair(individual, world.isend(client_id, individual, dv_c)));
-            ++individual;
-        }
-
-//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
-        boost::mpi::status s;
-
-        while (individual < population->populationSize())
-        {
-            //start a receive request, non-blocking
-            boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            //get start time
-            std::time_t start_time = std::time(NULL);
-            // test if we have made a receive.
-            boost::optional<boost::mpi::status> osr = r.test();
-            if (!osr)
-            {
-                //loop until we have received, or taken too long
-                while (!osr && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
-                {
-                    //wait a bit.
-                    osr = r.test();
-                }
-            }
-
-            //By now we either have received the data, or taken too long, so...
-            if (!osr)
-            {
-                //we must have timed out
-                r.cancel();
-            }
-            else
-            {
-                s = osr.get();
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-                (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-                (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
-                if (!oss)
-                {
-                    if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                    jobs_running[s.tag()].cancel();
-                }
-                jobs_running.erase(s.tag());
-
-                // Send out new job.
-                decision_vars.first = (*population)[individual]->getRealDVVector();
-                decision_vars.second = (*population)[individual]->getIntDVVector();
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-                jobs_running.insert(std::make_pair(individual, world.isend(s.source(), individual, dv_c)));
-
-                ++individual;
-            }
-
-
-
-
-        }
-
-        // test for sanity
-        if ((num_additional_jobs + num_initial_jobs) != jobs_running.size())
-        {
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " Logic error: job accounting wrong or there were incomplete jobs" << std::endl;
-        }
-
-        for (int i = 0; i < (num_initial_jobs + num_additional_jobs); ++i)
-        {
-            //start a receive request, non-blocking
-            boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            //get start time
-            std::time_t start_time = std::time(NULL);
-            // test if we have made a receive.
-            boost::optional<boost::mpi::status> os = r.test();
-            if (!os)
-            {
-                //loop until we have received, or taken too long
-                while (!os && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
-                {
-                    //wait a bit.
-                    os = r.test();
-                }
-            }
-
-            //By now we either have received the data, or taken too long, so...
-            if (!os)
-            {
-                //we must have timed out
-                r.cancel();
-            }
-            else
-            {
-                boost::mpi::status s = os.get();
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-                (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-                (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                boost::optional<boost::mpi::status> oss = jobs_running[s.tag()].test();
-                if (!oss)
-                {
-                    if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                    jobs_running[s.tag()].cancel();
-                }
-                jobs_running.erase(s.tag());
-            }
-
-        }
-
-        BOOST_FOREACH(JobRunningT & job, jobs_running)
-                    {
-                        // Failed jobs.
-                        // set decision variables to something not so good.
-                        boost::optional<boost::mpi::status> oss = job.second.test();
-                        if (!oss)
-                        {
-                            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending failed. But we have a receive. Strange " << std::endl;
-                            job.second.cancel();
-                        }
-                        (*population)[job.first]->setObjectives(this->worst_objs_and_constraints.first);
-                        (*population)[job.first]->setConstraints(this->worst_objs_and_constraints.second);
-                    }
-
-        for (int i = 0; i < number_clients; ++i)
-        {
-            int client_id = i + 1;
-//            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
-            world.isend(client_id, max_tag, dv_c);
-        }
-
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
-
-        if (this->do_log)
-        {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
-        }
-
+        ++gen_num;
+        evalAndSavePopImpl(population, save_dir, gen_num);
     }
 
     void
@@ -549,262 +612,13 @@ public:
 
 
 
-class ParallelEvaluatePopClientNonBlocking : public ParallelEvaluatorClientBase
-{
-    ObjectivesAndConstraintsBase & eval;
-
-public:
-    ParallelEvaluatePopClientNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
-    : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval)
-    {
-
-    }
-
-    void
-    operator()()
-    {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock" + std::to_string(++this->gen_num) + std::string(".log");
-            this->log_file = this->log_directory / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-        bool do_continue = true;
-        bool in_generation = true;
-        boost::mpi::request rq;
-        bool first_time = true;
-        std::string save_dir_s;
-        boost::filesystem::path save_dir;
-        bool do_save;
-        
-        while (do_continue)
-        {
-            if (this->do_log > this->OFF)
-                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " Waiting to receive save-dir" << std::endl;
-            boost::mpi::broadcast(world, save_dir_s,0);
-            if (save_dir_s == NO_SAVE)
-            {
-                do_save = false;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Not saving evaluation to file" << std::endl;
-                in_generation = true;
-            }
-            else if (save_dir_s == TERMINATE)
-            {
-                in_generation = false;
-                do_continue = false;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Terminating" << std::endl;
-                break;
-            }
-            else
-            {
-                do_save = true;
-                save_dir = save_dir_s;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Saving evaluation here: " << save_dir_s << std::endl;
-                in_generation = true;
-            }
-
-            while (in_generation)
-            {
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " waiting to receive" << std::endl;
-                boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " received " << decision_vars << " for individual " << s.tag() << std::endl;
-                if (s.tag() == max_tag)
-                {
-                    in_generation = false;
-                    if (this->do_log > this->OFF)
-                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                         << " End of generation" << std::endl;
-                }
-                else
-                {
-                    //calc objective
-                    if (!do_save)
-                    {
-                        objs_and_constraints = eval(decision_vars.first, decision_vars.second);
-                    }
-                    else
-                    {
-                        boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(s.tag()));
-                        if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
-                        objs_and_constraints = eval(decision_vars.first, decision_vars.second, save_ind_dir);
-                    }
-
-                    if (this->do_log > this->OFF)
-                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                         << " sending " << objs_and_constraints << " for individual " << s.tag();
-                    logging_file.flush();
-//                                         << std::endl;
-                    if (!first_time)
-                    {
-                        rq.wait();
-
-                    }
-                    else
-                    {
-                        first_time = false;
-                    }
-                    rq = world.isend(0, s.tag(), oc_c);
-                    if (this->do_log > this->OFF)
-                        logging_file << "; now sent"  << std::endl;
-
-                }
-            }
-
-        }
-
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
-
-        if (this->do_log)
-        {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
-        }
-    }
-};
-
-class ParallelEvaluatePopClient : public ParallelEvaluatorClientBase
-{
-    ObjectivesAndConstraintsBase & eval;
-
-public:
-    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
-        : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval)
-    {
-
-    }
-
-    void
-    operator()()
-    {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + std::to_string(++this->gen_num) + std::string(".log");
-            this->log_file = this->log_directory / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-
-        bool do_continue = true;
-        bool in_generation = true;
-//        boost::mpi::request rq;
-//        bool first_time = true;
-        std::string save_dir_s;
-        boost::filesystem::path save_dir;
-        bool do_save;
-
-        while (do_continue)
-        {
-            if (this->do_log > this->OFF)
-                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " Waiting to receive save-dir" << std::endl;
-            boost::mpi::broadcast(world, save_dir_s,0);
-            if (save_dir_s == "no_save")
-            {
-                do_save = false;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Not saving evaluation to file" << std::endl;
-                in_generation = true;
-            }
-            else if (save_dir_s == "terminate")
-            {
-                in_generation = false;
-                do_continue = false;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Terminating" << std::endl;
-                break;
-            }
-            else
-            {
-                do_save = true;
-                save_dir = save_dir_s;
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " Saving evaluation here: " << save_dir_s << std::endl;
-                in_generation = true;
-            }
-            while (in_generation)
-            {
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " waiting to receive" << std::endl;
-                boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " received " << decision_vars << " for individual " << s.tag() << std::endl;
-                if (s.tag() == max_tag)
-                {
-                    in_generation = false;
-                    if (this->do_log > this->OFF)
-                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                         << " End of generation" << std::endl;
-                }
-                else
-                {
-                    //calc objective
-                    if (!do_save)
-                    {
-                        objs_and_constraints = eval(decision_vars.first, decision_vars.second);
-                    }
-                    else
-                    {
-                        boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(s.tag()));
-                        if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
-                        objs_and_constraints = eval(decision_vars.first, decision_vars.second, save_ind_dir);
-                    }
-
-                    if (this->do_log > this->OFF)
-                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                         << " sending " << objs_and_constraints << " for individual " << s.tag()
-                                         << std::endl;
-
-                    world.send(0, s.tag(), oc_c);
-
-                }
-            }
-
-        }
-
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
-
-        if (this->do_log)
-        {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
-        }
-    }
-};
-
 template <typename RNG_PE = std::mt19937>
 class ParallelEvaluatePopServerNonBlockingContinuousEvolution : public ParallelEvaluatorSeverBase
 {
 
 private:
     std::queue<IndividualSPtr> jobs;
-    std::unordered_map<int, std::pair<boost::mpi::request, IndividualSPtr> > jobs_running;
+//    std::unordered_map<int, std::pair<boost::mpi::request, IndividualSPtr> > jobs_running;
     const int CLIENT_QUEUE_SIZE = 2;
 //    const bool addOffspring2Selection = true;
     bool add_offspring_2_mating_pool = true;
@@ -813,9 +627,9 @@ private:
     CombinedRealIntCrossover<RNG_PE> & crossover;
     CombinedRealIntMutation<RNG_PE> & mutation;
     int job_num = 0;
-    int gen_num = 0;
-    int breed_and_eval_count = 0;
-    int eval_and_save_count = 0;
+//    int gen_num = 0;
+//    int breed_and_eval_count = 0;
+//    int eval_and_save_count = 0;
 
 public:
     ParallelEvaluatePopServerNonBlockingContinuousEvolution(boost::mpi::environment & _mpi_env,
@@ -833,74 +647,7 @@ public:
 
     ~ParallelEvaluatePopServerNonBlockingContinuousEvolution()
     {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_server_nonblock_ce_term.log";
-            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
-            if (!(boost::filesystem::exists(log_file)))
-            {
-                try
-                {
-                    boost::filesystem::create_directories(log_file);
-//                    std::cout << "path " << path.first << " did not exist, so created\n";
-                }
-                catch(boost::filesystem::filesystem_error& e)
-                {
-                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
-                    std::cout << e.what() << "\n";
-//                    this->do_log = false;
-                    this->log_file = this->log_directory;
-                }
-            }
-            this->log_file = this->log_file / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-        // Send signal to slaves to indicate shutdown.
-//        std::cout << "In destructor" << std::endl;
-        std::string terminate = TERMINATE;
-        std::vector<boost::mpi::request> term_msg_rqsts;
-        for (int i = 1; i <= number_clients; ++i)
-        {
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending terminate to " << i << std::endl;
-            term_msg_rqsts.push_back(world.isend(i, max_tag, TERMINATE));
-        }
-        boost::mpi::wait_all(term_msg_rqsts.begin(), term_msg_rqsts.end());
-
-        if (this->do_log > this->OFF)
-            logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                             << ": Clearing running jobs" << std::endl;
-        if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Clearing previously sent jobs";
-        for(std::pair<const int, std::pair<boost::mpi::request, IndividualSPtr> > & job: jobs_running)
-        {
-            // Failed jobs.
-            // set decision variables to something not so good.
-            if (this->do_log > this->OFF)
-                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " never received objective and constraints from worker for job " << job.first;
-            boost::optional<boost::mpi::status> oss = job.second.first.test();
-            if (!oss)
-            {
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " sending of job to worker was unsuccessful." << std::endl;
-                job.second.first.cancel();
-            }
-            else
-            {
-                if (this->do_log > this->OFF)
-                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                     << " sending of job to worker was successful. But we never received a reply. Perhaps the generation incremented before the worker got to this job"
-                                     << std::endl;
-            }
-        }
-        jobs_running.clear();
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
+        terminate();
     }
 
     void
@@ -926,29 +673,14 @@ public:
     PopulationSPtr
     breedAndEvalPop(PopulationSPtr population, const boost::filesystem::path & save_dir)
     {
+        std::string base_log_file_name = "ParallelEvaluatePopServer_BreedEval";
+        std::string log_subdir = "ParallelEvaluateServerLogs";
         std::ofstream logging_file;
+//        breed_and_eval_count += 1;
+        gen_num += 1;
         if (this->do_log)
         {
-            std::string file_name = "parallel_evaluate_server_nonblock_ce_breedeval" + std::to_string(++this->breed_and_eval_count) + ".log";
-            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
-            if (!(boost::filesystem::exists(log_file)))
-            {
-                try
-                {
-                    boost::filesystem::create_directories(log_file);
-//                    std::cout << "path " << path.first << " did not exist, so created\n";
-                }
-                catch(boost::filesystem::filesystem_error& e)
-                {
-                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
-                    std::cout << e.what() << "\n";
-//                    this->do_log = false;
-                    this->log_file = this->log_directory;
-                }
-            }
-            this->log_file = this->log_file / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
+            makeLogFile(logging_file, base_log_file_name, gen_num, log_subdir);
         }
 
         if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Breed (and eval) population" << std::endl;
@@ -962,18 +694,21 @@ public:
         generational_reproduction_size = population->size();
         selection.resetBreedingPop(population);
         PopulationSPtr offspring(new Population);
-        std::string save_dir_s = save_dir.string();
+
+        save_dir_gen_nmbr.first = save_dir.string();
+        save_dir_gen_nmbr.second = gen_num;
 
         std::vector<boost::mpi::request> save_dir_msg_rqsts;
         for (int i = 1; i <= number_clients; ++i)
         {
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << i << " save directory: " << save_dir << std::endl;
-            save_dir_msg_rqsts.push_back(world.isend(i, max_tag, save_dir_s));
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << i << " save directory: " << save_dir << " and generational number: " << gen_num << std::endl;
+            save_dir_msg_rqsts.push_back(world.isend(i, max_tag, save_dir_gen_nmbr));
         }
 
 //        boost::mpi::broadcast(world, save_dir_s,0);
 
-        if (this->do_log > this->OFF) logging_file << "Start of evolution and evaluation for generation " << gen_num++ << std::endl;
+
+        if (this->do_log > this->OFF) logging_file << "Start of evolution and evaluation for generation " << gen_num << std::endl;
 
 //        typedef std::pair<const int, boost::mpi::request> JobRunningT;
 //        std::map<int, boost::mpi::request> jobs_running;
@@ -982,22 +717,20 @@ public:
         {
             for (int k = 0; k < number_clients; ++k)
             {
+                job_num += 1;
                 if (jobs.size() == 0) makeJobsApplyEAOperators(2);
-                decision_vars.first = jobs.front()->getRealDVVector();
-                decision_vars.second = jobs.front()->getIntDVVector();
                 int client_id = k + 1;
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << job_num << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-                jobs_running.insert(std::make_pair(job_num, std::make_pair(world.isend(client_id, job_num, dv_c), jobs.front())));
+                sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getIntDVVector(), job_num, client_id, logging_file);
                 jobs.pop();
-                do{
-                    ++job_num;
-                    if (job_num > max_tag - 3 ) job_num = 0;
-                }while (jobs_running.count(job_num) != 0);
             }
         }
 
         boost::mpi::wait_all(save_dir_msg_rqsts.begin(), save_dir_msg_rqsts.end());
         save_dir_msg_rqsts.clear();
+
+        //Check jobs sent.
+        checkJobsSent(logging_file);
+
 
 //        mpi::wait_all(reqs_out.begin(), reqs_out.end());
         boost::mpi::status s;
@@ -1006,40 +739,34 @@ public:
         while (results_received < generational_reproduction_size)
         {
             //start a receive request, non-blocking
-            s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            int client_id = s.source();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-            IndividualSPtr ind = jobs_running[s.tag()].second;
-            ind->setObjectives(objs_and_constraints.first);
-            ind->setConstraints(objs_and_constraints.second);
-            offspring->push_back(ind);
-            if (add_offspring_2_mating_pool) selection.add2BreedingPop(ind);
-            jobs_running.erase(s.tag());
-            ++results_received;
+
+            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+            boost::mpi::status s_results = r_results.wait();
+            int client_id = s_results.source();
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
 
             // Send out new job.
             if (jobs.size() == 0) makeJobsApplyEAOperators(2);
-            decision_vars.first = jobs.front()->getRealDVVector();
-            decision_vars.second = jobs.front()->getIntDVVector();
-
-
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << job_num << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-            while (jobs_running.count(job_num) != 0) ++job_num;
-            jobs_running.insert(std::make_pair(job_num, std::make_pair(world.isend(client_id, job_num, dv_c), jobs.front())));
+            sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getIntDVVector(), job_num, client_id, logging_file);
             jobs.pop();
-            do{
-                ++job_num;
-                if (job_num > max_tag - 3 ) job_num = 0;
-            }while (jobs_running.count(job_num) != 0);
+
+
+            //process results
+            IndividualSPtr ind(new Individual(this->problem_defs));
+            ind->setRealDVs(std::get<3>(objs_constraints_gen_num_dvs));
+            ind->setIntDVs(std::get<4>(objs_constraints_gen_num_dvs));
+            ind->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
+            ind->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+            offspring->push_back(ind);
+            if (add_offspring_2_mating_pool) selection.add2BreedingPop(ind);
+            ++results_received;
+
+            //Check jobs sent.
+            checkJobsSent(logging_file);
         }
 
-//        for (int i = 0; i < number_clients; ++i)
-//        {
-//            int client_id = i + 1;
-////            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
-//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
-//            world.isend(client_id, max_tag, dv_c);
-//        }
+        deleteOldJobs(logging_file, gen_num - 2);
+
 
         if (this->do_log)
         {
@@ -1048,12 +775,12 @@ public:
 
         if (this->do_log)
         {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
+            if (gen_num>3) deletePreviousLog(base_log_file_name, gen_num-3, log_subdir);
         }
 
         return(offspring);
     }
+
 
     void
     evalPop(PopulationSPtr population)
@@ -1061,285 +788,12 @@ public:
         evalAndSavePop(population, NO_SAVE);
     }
 
-    boost::optional<boost::mpi::status>
-    waitForJobToFinish(std::ofstream & logging_file, int job_id = boost::mpi::any_tag)
-    {
-        //start a receive request, non-blocking
-        boost::mpi::request r = world.irecv(boost::mpi::any_source, job_id, oc_c);
-        //get start time
-        std::time_t start_time, end_time;
-        std::time(&start_time);
-        int elapsed_time = 0;
-        boost::optional<boost::mpi::status> osr;
-        // test if we have made a receive.
-        do
-        {
-            std::time(&end_time);
-            elapsed_time = std::difftime(end_time, start_time);
-            osr = r.test();
 
-        }
-        while(!osr && elapsed_time < this->timeout_time);
-
-        //By now we either have received the data, or taken too long, so...
-        if (!osr)
-        {
-            //we must have timed out
-            if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Cancelling job " << job_id << " after waiting " << elapsed_time << " seconds." << std::endl;
-            r.cancel();
-            jobs_running.erase(job_id);
-        }
-
-        return osr;
-    }
 
     void
     evalAndSavePop(PopulationSPtr population, const boost::filesystem::path & save_dir)
     {
-        std::ofstream logging_file;
-        if (this->do_log)
-        {
-            std::string file_name = "parallel_evaluate_server_nonblock_ce_evalsave" + std::to_string(++this->eval_and_save_count) + ".log";
-            this->log_file = this->log_directory / "ParallelEvaluateServerLogs";
-            if (!(boost::filesystem::exists(log_file)))
-            {
-                try
-                {
-                    boost::filesystem::create_directories(log_file);
-//                    std::cout << "path " << path.first << " did not exist, so created\n";
-                }
-                catch(boost::filesystem::filesystem_error& e)
-                {
-                    std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
-                    std::cout << e.what() << "\n";
-//                    this->do_log = false;
-                    this->log_file = this->log_directory;
-                }
-            }
-            this->log_file = this->log_file / file_name;
-            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
-        }
-
-        if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time() << ": Eval (and save) population" << std::endl;
-
-        std::string save_dir_s = save_dir.string();
-        std::vector<boost::mpi::request> save_dir_msg_rqsts;
-        for (int i = 1; i <= number_clients; ++i)
-        {
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << i << " save directory: " << save_dir << std::endl;
-//            world.isend(i, max_tag - 1, save_dir.string());
-            save_dir_msg_rqsts.push_back(world.isend(i, max_tag, save_dir_s));
-        }
-
-        if (this->do_log > this->OFF) logging_file << "Evaluating population with size: " << population->size() << std::endl;
-
-        //Sanity check - that we can represent each individual by an mpi tag.
-        if (population->populationSize() > (max_tag -1))
-        {
-            if (this->do_log > this->OFF) logging_file << "problem: max tag too small, population too large for mpi" << std::endl;
-        }
-
-        int individual = 0;
-//        std::vector<boost::mpi::request> reqs_out(number_clients);
-        int num_initial_jobs = number_clients;
-        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
-        for (; individual < num_initial_jobs; ++individual)
-        {
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
-            int client_id = individual + 1;
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-            if (jobs_running.count(individual) != 0) waitForJobToFinish(logging_file, individual);
-            jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
-        }
-
-//        // keep jobs out there for slave eficiency (so queue an additional job for each slave)
-//        int num_additional_jobs = number_clients;
-//        if ((num_additional_jobs + num_initial_jobs) > population->populationSize()) num_additional_jobs = population->populationSize() - num_initial_jobs;
-//        for (int i = 0; i < num_additional_jobs; ++i)
-//        {
-//            decision_vars.first = (*population)[individual]->getRealDVVector();
-//            decision_vars.second = (*population)[individual]->getIntDVVector();
-//            int client_id = individual + 1 - num_initial_jobs;
-//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-//            if (jobs_running.count(individual) != 0)
-//            {
-//                //start a receive request, non-blocking
-//                boost::mpi::request r = world.irecv(boost::mpi::any_source, individual, oc_c);
-//                //get start time
-//                std::time_t start_time = std::time(NULL);
-//                // test if we have made a receive.
-//                boost::optional<boost::mpi::status> osr = r.test();
-//                if (!osr)
-//                {
-//                    //loop until we have received, or taken too long
-//                    while (!osr && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
-//                    {
-//                        //wait a bit.
-//                        osr = r.test();
-//                    }
-//                }
-//
-//                //By now we either have received the data, or taken too long, so...
-//                if (!osr)
-//                {
-//                    //we must have timed out
-//                    r.cancel();
-//                }
-//                jobs_running.erase(individual);
-//
-//            }
-//            jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
-//            ++individual;
-//        }
-
-//        boost::mpi::wait_all(save_dir_msg_rqsts.begin(), save_dir_msg_rqsts.end());
-//        save_dir_msg_rqsts.clear();
-
-//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
-//        boost::mpi::status s;
-
-        while (individual < population->populationSize())
-        {
-            //start a receive request, non-blocking
-            boost::mpi::request r = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
-            boost::mpi::status s = r.wait();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-            jobs_running.erase(s.tag());
-//            //get start time
-//            std::time_t start_time = std::time(NULL);
-//            // test if we have made a receive.
-//            boost::optional<boost::mpi::status> osr = r.test();
-//            if (!osr)
-//            {
-//                //loop until we have received, or taken too long
-//                while (!osr && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
-//                {
-//                    //wait a bit.
-//                    osr = r.test();
-//                }
-//            }
-//
-//            //By now we either have received the data, or taken too long, so...
-//            if (!osr)
-//            {
-//                //we must have timed out
-//                r.cancel();
-//            }
-//            else
-//            {
-
-            // Send out new job.
-            decision_vars.first = (*population)[individual]->getRealDVVector();
-            decision_vars.second = (*population)[individual]->getIntDVVector();
-            int client_id = s.source();
-            if (jobs_running.count(individual) != 0) waitForJobToFinish(logging_file, individual);
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVS: " << decision_vars << std::endl;
-            jobs_running.insert(std::make_pair(individual, std::make_pair(world.isend(client_id, individual, dv_c), (*population)[individual])));
-
-                //Process received job
-                if (s.tag() < population->size())
-                {
-                    (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-                    (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                }
-
-//                // send out job for next individual. Make sure there isn't a job already sent out but not yet received with job id equal to the individual.
-//                if (jobs_running.count(individual) != 0)
-//                {
-//                    //start a receive request, non-blocking
-//                    boost::mpi::request r = world.irecv(boost::mpi::any_source, individual, oc_c);
-//                    //get start time
-//                    std::time_t start_time = std::time(NULL);
-//                    // test if we have made a receive.
-//                    boost::optional<boost::mpi::status> osr = r.test();
-//                    if (!osr)
-//                    {
-//                        //loop until we have received, or taken too long
-//                        while (!osr && (std::difftime(std::time(NULL),start_time) < this->timeout_time))
-//                        {
-//                            //wait a bit.
-//                            osr = r.test();
-//                        }
-//                    }
-//
-//                    //By now we either have received the data, or taken too long, so...
-//                    if (!osr)
-//                    {
-//                        //we must have timed out
-//                        r.cancel();
-//                    }
-//                    jobs_running.erase(individual);
-//
-//                }
-
-                ++individual;
-        }
-
-        //Try and get a receive from remaining jobs still running
-        for (int j = 0; j < jobs_running.size(); ++j)
-        {
-            //start a receive request, non-blocking
-            boost::optional<boost::mpi::status> os = waitForJobToFinish(logging_file);
-            if (os)
-            {
-                boost::mpi::status s = os.get();
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
-                if (s.tag() < population->size())
-                {
-                    (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
-                    (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
-                }
-                jobs_running.erase(s.tag());
-            }
-        }
-
-        // Cancel jobs running which we have not received a response from (timed out)
-        for(std::pair<const int, std::pair<boost::mpi::request, IndividualSPtr> > & job: jobs_running)
-        {
-            // Failed jobs.
-            // set decision variables to something not so good.
-            if (this->do_log > this->OFF)
-                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " never received objective and constraints from worker for individual " << job.first;
-            boost::optional<boost::mpi::status> oss = job.second.first.test();
-            if (!oss)
-            {
-                if (this->do_log > this->OFF)
-                    logging_file
-                                     << ", because sending of individual to worker was unsuccessful." << std::endl;
-                job.second.first.cancel();
-            }
-            else
-            {
-                if (this->do_log > this->OFF)
-                    logging_file
-                                     << ". While sending of individual to worker was successful, we never received a reply. Perhaps the generation incremented before a worker got to this job"
-                                     << std::endl;
-            }
-            (*population)[job.first]->setObjectives(this->worst_objs_and_constraints.first);
-            (*population)[job.first]->setConstraints(this->worst_objs_and_constraints.second);
-        }
-
-//        for (int i = 0; i < number_clients; ++i)
-//        {
-//            int client_id = i + 1;
-////            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
-//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
-//            world.isend(client_id, max_tag, dv_c);
-//        }
-        if (this->do_log)
-        {
-            if (logging_file.is_open()) logging_file.close();
-        }
-
-        if (this->do_log)
-        {
-            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-            this->previous_log_file = this->log_file;
-        }
-
+        evalAndSavePopImpl(population, save_dir, -1);
     }
 
 
@@ -1359,15 +813,36 @@ public:
 
 
 
-class ParallelEvaluatePopClientNonBlockingContinuousEvolution : public ParallelEvaluatorClientBase
+class ParallelEvaluatePopClientNonBlocking : public ParallelEvaluatorClientBase
 {
     ObjectivesAndConstraintsBase & eval;
-    std::queue< std::tuple< int, int, std::pair<std::vector<double>, std::vector<int> > > > jobs; //First is gen_number, second is job number, third is decision variable
-    int gen_number;
+//    std::queue< std::tuple< int, int, std::pair<std::vector<double>, std::vector<int> > > > jobs;
+
+    struct Jobs2DoCompare {
+        typedef std::pair< int, std::tuple<int, std::vector<double>, std::vector<int> > > JobInfo;
+
+        bool operator() (const JobInfo& x, const JobInfo& y) const
+        {
+            return (std::get<0>(x.second)) > (std::get<0>(y.second));
+        }
+        typedef std::tuple< int, int, std::tuple<int, std::vector<double>, std::vector<int> > > first_argument_type;
+        typedef std::tuple< int, int, std::tuple<int, std::vector<double>, std::vector<int> > > second_argument_type;
+        typedef bool result_type;
+    };
+
+    Jobs2DoCompare jobs_sort;
+    typedef std::pair< int, std::tuple<int, std::vector<double>, std::vector<int> > > Job2DoInfo; //First is job number, third tuple of gen number then  decision variables
+    typedef std::multiset< Job2DoInfo, Jobs2DoCompare > Jobs2DoMultiSet;
+    Jobs2DoMultiSet jobs_2_do;
+    typedef std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> > JobsDoneInfo;
+    typedef std::list<std::tuple<boost::mpi::request, int,  JobsDoneInfo> > JobsDoneList; //First is mpi_request, 2nd is job number, 3rd is tuple of objs, constraints, gen_num and decision vars
+    JobsDoneList jobs_done;
+    const int MAX_JOBS_ON_QUEUE = 20;
+//    int gen_number;
 
 public:
-    ParallelEvaluatePopClientNonBlockingContinuousEvolution(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
-        : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval), gen_number(0)
+    ParallelEvaluatePopClientNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
+        : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval), jobs_2_do(jobs_sort)
     {
 
     }
@@ -1377,47 +852,55 @@ public:
     {
 
         std::ofstream logging_file;
+        std::string log_file_base_name = "ParallelEvaluatePopClientNonBlocking";
+        std::string log_subdir_name = "ParallelEvaluateClientLogs";
 
         bool do_continue = true;
         bool in_generation = true;
-        boost::mpi::request rq;
+//        boost::mpi::request rq;
         bool first_time = true;
         std::string save_dir_s;
         boost::filesystem::path save_dir;
         bool do_save;
+        std::pair<std::vector<double>, std::vector<double> > objs_and_constraints;
 
         while (do_continue)
         {
-            if (this->do_log)
+            // Start of new generation - get generation number and save directory if we are to save the results of the evaluations.
+            std::stringstream logging_file_tempry;
+            if (do_log > OFF)
+                logging_file_tempry << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                    << " Waiting to receive start-of-generation message (e.g. location of save-dir)" << std::endl;
+            boost::mpi::request r = world.irecv(0, max_tag, save_dir_gen_nmbr);
+            boost::mpi::status s = r.wait();
+            save_dir_s = save_dir_gen_nmbr.first;
+            gen_num = save_dir_gen_nmbr.second;
+
+            // Are there any other save dir gen number messages - we want to get the latest....
+            boost::optional<boost::mpi::status> so = world.iprobe(0, max_tag);
+            while (so)
             {
-                if (logging_file.is_open()) logging_file.close();
-                std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock_ce_gen" + std::to_string(++this->gen_num) + std::string(".log");
-                this->log_file = this->log_directory / "ParallelEvaluateClientLogs";
-                if (!(boost::filesystem::exists(log_file)))
+                boost::mpi::request r = world.irecv(0, max_tag, save_dir_gen_nmbr);
+                boost::mpi::status s = r.wait();
+                if (save_dir_gen_nmbr.second > gen_num)
                 {
-                    try
-                    {
-                        boost::filesystem::create_directories(log_file);
-//                    std::cout << "path " << path.first << " did not exist, so created\n";
-                    }
-                    catch(boost::filesystem::filesystem_error& e)
-                    {
-                        std::cout << "Attempted to create " << this->log_file.string().c_str() << " but was unable\n";
-                        std::cout << e.what() << "\n";
-//                    this->do_log = false;
-                        this->log_file = this->log_directory;
-                    }
+                    save_dir_s = save_dir_gen_nmbr.first;
+                    gen_num = save_dir_gen_nmbr.second;
                 }
-                this->log_file = this->log_file / file_name;
-                logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-                if (!logging_file.is_open()) this->do_log = this->OFF;
+                so = world.iprobe(0, max_tag);
             }
 
-            if (this->do_log > this->OFF)
-                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " Waiting to receive start-of-generation message (e.g. location of save-dir)" << std::endl;
-            boost::mpi::request r = world.irecv(0, max_tag, save_dir_s);
-            boost::mpi::status s = r.wait();
+            // Set up logging file
+            if (do_log > OFF)
+            {
+
+                if (logging_file.is_open()) logging_file.close();
+                makeLogFile(logging_file, log_file_base_name, gen_num, log_subdir_name);
+                if (do_log > OFF) logging_file << logging_file_tempry.str().c_str();
+            }
+
+
+            // Set up saving directory, if we were given one.
             if (save_dir_s == NO_SAVE)
             {
                 do_save = false;
@@ -1425,7 +908,7 @@ public:
                     logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
                                      << " Not saving evaluation to file" << std::endl;
                 in_generation = true;
-                ++gen_number;
+//                ++gen_number;
             }
             else if (save_dir_s == TERMINATE)
             {
@@ -1444,11 +927,11 @@ public:
                     logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
                                      << " Saving evaluation here: " << save_dir_s << std::endl;
                 in_generation = true;
-                ++gen_number;
+//                ++gen_number;
             }
             if (this->do_log > this->OFF)
                 logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                 << " Start of generation " << gen_number << std::endl;
+                                 << " Start of generation " << gen_num << std::endl;
 
             bool print_waiting = true;
             while (in_generation)
@@ -1460,8 +943,8 @@ public:
                     print_waiting = false;
                 }
 
-                bool jobs_2_receive = true;
-                while (jobs_2_receive)
+                bool is_jobs_2_receive = true;
+                while (is_jobs_2_receive)
                 {
 //                    boost::optional<boost::mpi::status> s_end_of_gen = world.iprobe(0, max_tag);
 //                    if (s_end_of_gen)
@@ -1475,12 +958,14 @@ public:
                     {
                         if (s_is_job.get().tag() != max_tag)
                         {
-                            boost::mpi::status s_job = world.recv(0, boost::mpi::any_tag, dv_c);
+                            boost::mpi::request r_job = world.irecv(0, boost::mpi::any_tag, boost::mpi::get_content(gen_number_dvs));
+                            boost::mpi::status s_job = r_job.wait();
+
                             print_waiting = true;
                             if (this->do_log > this->OFF)
                                 logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                                 << " received " << decision_vars << " for individual " << s_job.tag() << std::endl;
-                            jobs.push(std::make_tuple(gen_number, s_job.tag(), decision_vars));
+                                                 << " received " << gen_number_dvs << " for individual/job number " << s_job.tag() << std::endl;
+                            jobs_2_do.insert(std::make_pair(s_job.tag(), gen_number_dvs));
                         }
                         else // I.e. there is a message indicating next generation has commenced....
                         {
@@ -1492,74 +977,480 @@ public:
                     }
                     else
                     {
-                        jobs_2_receive = false;
+                        is_jobs_2_receive = false;
                     }
                 }
 
 
                 if (in_generation)
                 {
-                    if (!jobs.empty())
+                    if (!jobs_2_do.empty())
                     {
-                        while (std::get<0>(jobs.front()) < std::get<0>(jobs.back()))
-                        {
-                            jobs.pop();
-                        }
-
                         // Now run the job at the front of the queue
-                        std::tuple< int, int, std::pair<std::vector<double>, std::vector<int> > > & job = jobs.front();
+                        Jobs2DoMultiSet::iterator job_2_do = jobs_2_do.begin();
                             //calc objective
                             if (!do_save)
                             {
-                                objs_and_constraints = eval(std::get<2>(job).first, std::get<2>(job).second);
+                                objs_and_constraints = eval(std::get<1>(job_2_do->second), std::get<2>(job_2_do->second));
                             }
                             else
                             {
-                                boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(std::get<1>(job)));
+                                boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(job_2_do->first));
                                 if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
-                                objs_and_constraints = eval(std::get<2>(job).first, std::get<2>(job).second, save_ind_dir);
+                                objs_and_constraints = eval(std::get<1>(job_2_do->second), std::get<2>(job_2_do->second), save_ind_dir);
                             }
 
-                            if (this->do_log > this->OFF)
+                            std::get<0>(objs_constraints_gen_num_dvs) = objs_and_constraints.first;
+                            std::get<1>(objs_constraints_gen_num_dvs) = objs_and_constraints.second;
+                            std::get<2>(objs_constraints_gen_num_dvs) = std::get<0>(job_2_do->second);
+                            std::get<3>(objs_constraints_gen_num_dvs) = std::get<1>(job_2_do->second);
+                            std::get<4>(objs_constraints_gen_num_dvs) = std::get<2>(job_2_do->second);
+                            boost::mpi::request rq;
+                            jobs_done.push_front(std::make_tuple(rq, job_2_do->first, objs_constraints_gen_num_dvs));
+                            std::tuple<boost::mpi::request, int,  JobsDoneInfo> & job_done = jobs_done.front();
+
+                        if (this->do_log > this->OFF)
                                 logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                                 << " sending " << objs_and_constraints << " for individual " << std::get<1>(job);
-                            logging_file.flush();
-//                                         << std::endl;
+                                                 << " sending " << std::get<2>(job_done) << " for individual/job number " << std::get<1>(job_done) << std::endl;
+                            std::get<0>(job_done) = world.isend(0, std::get<1>(job_done), boost::mpi::get_content(std::get<2>(job_done)));
 
-                            // Wait for previous job results to be successfully sent.
-                            if (!first_time)
-                            {
-                                rq.wait();
-                            }
-                            else
-                            {
-                                first_time = false;
-                            }
-                            rq = world.isend(0, std::get<1>(job), oc_c);
-                            if (this->do_log > this->OFF)
-                                logging_file << "; now sent"  << std::endl;
-                        jobs.pop();
+                            jobs_2_do.erase(job_2_do);
                     }
 
                 }
 
-                if (this->do_log)
-                {
-                    if (logging_file.is_open()) logging_file.close();
-                }
 
-                if (this->do_log)
-                {
-                    if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
-                    this->previous_log_file = this->log_file;
-                }
+                // keep the number of jobs in the queue under control
+                    bool do_continue = false;
+                    do{
+                        do_continue = false;
+                        if (jobs_2_do.size() > MAX_JOBS_ON_QUEUE)
+                        {
+                            Jobs2DoMultiSet::iterator old_job_2_do = jobs_2_do.end();
+                            if (std::get<0>(old_job_2_do->second) < gen_num)
+                            {
+                                jobs_2_do.erase(old_job_2_do);
+                                do_continue = true;
+                            }
+                        }
+                    } while (do_continue);
+
+
+
+                // Test sends back, and remove those completed.
+                boost::optional<boost::mpi::status> os;
+                do{
+                    os = boost::optional<boost::mpi::status>();
+                    if (!jobs_done.empty())
+                    {
+                        std::tuple<boost::mpi::request, int,  JobsDoneInfo> & job_sending = jobs_done.back();
+                        os = std::get<0>(job_sending).test();
+                        if (os)
+                        {
+                            if (this->do_log > this->OFF)
+                                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                                << " individual/job number " << std::get<1>(job_sending) << " now sent" << std::endl;
+                            jobs_done.pop_back();
+                        }
+                    }
+                } while (os);
+
+
+            }
+            if (this->do_log)
+            {
+                if (logging_file.is_open()) logging_file.close();
+            }
+
+            if (this->do_log)
+            {
+                    if (gen_num>3) deletePreviousLog(log_file_base_name, gen_num-3, log_subdir_name);
             }
 
         }
 
     }
+
 };
 
+
+//class ParallelEvaluatePopServer : public ParallelEvaluatorSeverBase
+//{
+//
+//public:
+//    ParallelEvaluatePopServer(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
+//    : ParallelEvaluatorSeverBase(_mpi_env, _world, _problem_defs)
+//    {
+//
+//    }
+//
+//    ~ParallelEvaluatePopServer()
+//    {
+//        std::ofstream logging_file;
+//        if (this->do_log)
+//        {
+//            std::string file_name = "parallel_eval_server_term.log";
+//            log_file = this->log_directory / file_name;
+//            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+//            if (!logging_file.is_open()) this->do_log = this->OFF;
+//        }
+//
+//        // Send signal to slaves to indicate shutdown.
+////        std::cout << "In destructor" << std::endl;
+//        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending terminate" << std::endl;
+//        std::string terminate = TERMINATE;
+//        boost::mpi::broadcast(world, terminate,0);
+//    }
+//
+//    void
+//    evalPop(PopulationSPtr population, boost::filesystem::path save_dir)
+//    {
+//
+//        std::ofstream logging_file;
+//        if (this->do_log)
+//        {
+//            std::string file_name = "parallel_eval_server" + std::to_string(this->gen_num) + ".log";
+//            this->log_file = this->log_directory / file_name;
+//            logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+//            if (!logging_file.is_open()) this->do_log = this->OFF;
+//        }
+//
+//        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " Broadcasting save directory: " << save_dir << std::endl;
+//        std::string save_dir_s = save_dir.string();
+//        boost::mpi::broadcast(world, save_dir_s,0);
+//
+//        if (this->do_log > this->OFF) logging_file << "Evaluating population with size: " << population->size() << std::endl;
+//
+//        //Sanity check - that we can represent each individual by an mpi tag.
+//        if (population->populationSize() > (max_tag - 1))
+//        {
+//            if (this->do_log > this->OFF) logging_file << "problem: max tag too small, population too large for mpi" << std::endl;
+//        }
+//
+//        int individual = 0;
+//        std::vector<boost::mpi::request> reqs_out(number_clients);
+//        if (this->do_log > this->OFF) logging_file << "Evaluating population using " << number_clients << std::endl;
+//        int num_initial_jobs = number_clients;
+//        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
+//        for (; individual < num_initial_jobs; ++individual)
+//        {
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " << "Evaluating individual " << individual << std::endl;
+//            std::get<0>(gen_number_dvs) = this->gen_num;
+//            std::get<1>(gen_number_dvs) = (*population)[individual]->getRealDVVector();
+//            std::get<2>(gen_number_dvs) = (*population)[individual]->getIntDVVector();
+//            int client_id = individual + 1;
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with "  << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVs: " << decision_vars << std::endl;
+//            world.send(client_id, individual, gndv_c);
+//        }
+////        mpi::wait_all(reqs_out.begin(), reqs_out.end());
+//
+//        while (individual < population->populationSize())
+//        {
+//            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
+//            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+//            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+//
+//            decision_vars.first = (*population)[individual]->getRealDVVector();
+//            decision_vars.second = (*population)[individual]->getIntDVVector();
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << s.source() << " individual " << individual << " with " << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVs: " << decision_vars << std::endl;
+//            world.send(s.source(), individual, dv_c);
+//
+//            ++individual;
+//        }
+//
+//        for (int i = 0; i < number_clients; ++i)
+//        {
+//            boost::mpi::status s = world.recv(boost::mpi::any_source, boost::mpi::any_tag, oc_c);
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s.source() << " individual " << s.tag() << " with " << objs_and_constraints << std::endl;
+//            (*population)[s.tag()]->setObjectives(objs_and_constraints.first);
+//            (*population)[s.tag()]->setConstraints(objs_and_constraints.second);
+//
+//
+////            world.send(s.source(), max_tag, dv_c);
+//        }
+//
+//        for (int i = 0; i < number_clients; ++i)
+//        {
+//            int client_id = i + 1;
+////            std::cout << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " terminate\n";
+//            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " sending to " << client_id << " end of generation" << std::endl;
+//            world.isend(client_id, max_tag, dv_c);
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (logging_file.is_open()) logging_file.close();
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+//            this->previous_log_file = this->log_file;
+//        }
+//    }
+//
+//    void
+//    operator()(PopulationSPtr population)
+//    {
+//        this->evalPop(population, NO_SAVE);
+//    }
+//
+//    void
+//    operator()(PopulationSPtr population, boost::filesystem::path & save_dir)
+//    {
+//        this->evalPop(population, save_dir);
+//    }
+//};
+
+//class ParallelEvaluatePopClientNonBlocking : public ParallelEvaluatorClientBase
+//{
+//    ObjectivesAndConstraintsBase & eval;
+//
+//public:
+//    ParallelEvaluatePopClientNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
+//    : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval)
+//    {
+//
+//    }
+//
+//    void
+//    operator()()
+//    {
+//        std::ofstream logging_file;
+//        if (this->do_log)
+//        {
+//            std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + "_nonblock" + std::to_string(++this->gen_num) + std::string(".log");
+//            this->log_file = this->log_directory / file_name;
+//            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+//            if (!logging_file.is_open()) this->do_log = this->OFF;
+//        }
+//
+//        bool do_continue = true;
+//        bool in_generation = true;
+//        boost::mpi::request rq;
+//        bool first_time = true;
+//        std::string save_dir_s;
+//        boost::filesystem::path save_dir;
+//        bool do_save;
+//
+//        while (do_continue)
+//        {
+//            if (this->do_log > this->OFF)
+//                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                 << " Waiting to receive save-dir" << std::endl;
+//            boost::mpi::broadcast(world, save_dir_s,0);
+//            if (save_dir_s == NO_SAVE)
+//            {
+//                do_save = false;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Not saving evaluation to file" << std::endl;
+//                in_generation = true;
+//            }
+//            else if (save_dir_s == TERMINATE)
+//            {
+//                in_generation = false;
+//                do_continue = false;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Terminating" << std::endl;
+//                break;
+//            }
+//            else
+//            {
+//                do_save = true;
+//                save_dir = save_dir_s;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Saving evaluation here: " << save_dir_s << std::endl;
+//                in_generation = true;
+//            }
+//
+//            while (in_generation)
+//            {
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " waiting to receive" << std::endl;
+//                boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " received " << decision_vars << " for individual " << s.tag() << std::endl;
+//                if (s.tag() == max_tag)
+//                {
+//                    in_generation = false;
+//                    if (this->do_log > this->OFF)
+//                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                         << " End of generation" << std::endl;
+//                }
+//                else
+//                {
+//                    //calc objective
+//                    if (!do_save)
+//                    {
+//                        objs_and_constraints = eval(decision_vars.first, decision_vars.second);
+//                    }
+//                    else
+//                    {
+//                        boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(s.tag()));
+//                        if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
+//                        objs_and_constraints = eval(decision_vars.first, decision_vars.second, save_ind_dir);
+//                    }
+//
+//                    if (this->do_log > this->OFF)
+//                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                         << " sending " << objs_and_constraints << " for individual " << s.tag();
+//                    logging_file.flush();
+////                                         << std::endl;
+//                    if (!first_time)
+//                    {
+//                        rq.wait();
+//
+//                    }
+//                    else
+//                    {
+//                        first_time = false;
+//                    }
+//                    rq = world.isend(0, s.tag(), oc_c);
+//                    if (this->do_log > this->OFF)
+//                        logging_file << "; now sent"  << std::endl;
+//
+//                }
+//            }
+//
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (logging_file.is_open()) logging_file.close();
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+//            this->previous_log_file = this->log_file;
+//        }
+//    }
+//};
+
+//class ParallelEvaluatePopClient : public ParallelEvaluatorClientBase
+//{
+//    ObjectivesAndConstraintsBase & eval;
+//
+//public:
+//    ParallelEvaluatePopClient(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr  _problem_defs, ObjectivesAndConstraintsBase & _eval)
+//        : ParallelEvaluatorClientBase(_mpi_env, _world, _problem_defs), eval(_eval)
+//    {
+//
+//    }
+//
+//    void
+//    operator()()
+//    {
+//        std::ofstream logging_file;
+//        if (this->do_log)
+//        {
+//            std::string file_name = "parallel_evaluate_client" + std::to_string(world.rank()) + std::to_string(++this->gen_num) + std::string(".log");
+//            this->log_file = this->log_directory / file_name;
+//            logging_file.open(this->log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
+//            if (!logging_file.is_open()) this->do_log = this->OFF;
+//        }
+//
+//
+//        bool do_continue = true;
+//        bool in_generation = true;
+////        boost::mpi::request rq;
+////        bool first_time = true;
+//        std::string save_dir_s;
+//        boost::filesystem::path save_dir;
+//        bool do_save;
+//
+//        while (do_continue)
+//        {
+//            if (this->do_log > this->OFF)
+//                logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                 << " Waiting to receive save-dir" << std::endl;
+//            boost::mpi::broadcast(world, save_dir_s,0);
+//            if (save_dir_s == "no_save")
+//            {
+//                do_save = false;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Not saving evaluation to file" << std::endl;
+//                in_generation = true;
+//            }
+//            else if (save_dir_s == "terminate")
+//            {
+//                in_generation = false;
+//                do_continue = false;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Terminating" << std::endl;
+//                break;
+//            }
+//            else
+//            {
+//                do_save = true;
+//                save_dir = save_dir_s;
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " Saving evaluation here: " << save_dir_s << std::endl;
+//                in_generation = true;
+//            }
+//            while (in_generation)
+//            {
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " waiting to receive" << std::endl;
+//                boost::mpi::status s = world.recv(0, boost::mpi::any_tag, dv_c);
+//                if (this->do_log > this->OFF)
+//                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                     << " received " << decision_vars << " for individual " << s.tag() << std::endl;
+//                if (s.tag() == max_tag)
+//                {
+//                    in_generation = false;
+//                    if (this->do_log > this->OFF)
+//                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                         << " End of generation" << std::endl;
+//                }
+//                else
+//                {
+//                    //calc objective
+//                    if (!do_save)
+//                    {
+//                        objs_and_constraints = eval(decision_vars.first, decision_vars.second);
+//                    }
+//                    else
+//                    {
+//                        boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(s.tag()));
+//                        if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
+//                        objs_and_constraints = eval(decision_vars.first, decision_vars.second, save_ind_dir);
+//                    }
+//
+//                    if (this->do_log > this->OFF)
+//                        logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+//                                         << " sending " << objs_and_constraints << " for individual " << s.tag()
+//                                         << std::endl;
+//
+//                    world.send(0, s.tag(), oc_c);
+//
+//                }
+//            }
+//
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (logging_file.is_open()) logging_file.close();
+//        }
+//
+//        if (this->do_log)
+//        {
+//            if (this->delete_previous_logfile && !this->previous_log_file.empty()) boost::filesystem::remove_all(this->previous_log_file);
+//            this->previous_log_file = this->log_file;
+//        }
+//    }
+//};
 
 
 #endif /* ParallelEvaluator_h */
