@@ -317,7 +317,7 @@ public:
         std::get<1>(gen_number_dvs) = real_dvs;
         std::get<2>(gen_number_dvs) = int_dvs;
 
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << job_num << " with " << real_dvs.size() << ", " << int_dvs.size() << " DVS: " << gen_number_dvs << std::endl;
+        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual/job num " << job_num << " with " << real_dvs.size() << ", " << int_dvs.size() << " DVS: " << gen_number_dvs << std::endl;
         boost::mpi::request rq;
         jobs_sending.push_front(std::make_tuple(rq, job_num, gen_number_dvs));
         std::tuple<boost::mpi::request, int,  JobsSentInfo> & job = jobs_sending.front();
@@ -717,7 +717,6 @@ public:
         {
             for (int k = 0; k < number_clients; ++k)
             {
-                job_num += 1;
                 if (jobs.size() == 0) makeJobsApplyEAOperators(2);
                 int client_id = k + 1;
                 sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getIntDVVector(), job_num, client_id, logging_file);
@@ -732,8 +731,7 @@ public:
         checkJobsSent(logging_file);
 
 
-//        mpi::wait_all(reqs_out.begin(), reqs_out.end());
-        boost::mpi::status s;
+//
         int results_received = 0;
 
         while (results_received < generational_reproduction_size)
@@ -743,7 +741,7 @@ public:
             boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(objs_constraints_gen_num_dvs));
             boost::mpi::status s_results = r_results.wait();
             int client_id = s_results.source();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
 
             // Send out new job.
             if (jobs.size() == 0) makeJobsApplyEAOperators(2);

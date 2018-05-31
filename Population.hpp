@@ -347,12 +347,19 @@ print(const Population& pop, boost::filesystem::path file)
     else
     {
         std::string filename = file.stem().string();
-        if (filename == ".'") filename = "population";
+        if (filename == ".") filename = "population";
         boost::filesystem::path file_i_extn = file.parent_path() / (filename + ".txt");
         std::ofstream of(file_i_extn.string().c_str());
         if (of)
         {
             of << pop;
+        }
+        file_i_extn = file.parent_path() / (filename + ".xml");
+        std::ofstream ofs(file_i_extn.string().c_str());
+        if (ofs)
+        {
+            boost::archive::xml_oarchive oa(ofs);
+            ofs << boost::serialization::make_nvp("Population", pop);
         }
     }
 }
