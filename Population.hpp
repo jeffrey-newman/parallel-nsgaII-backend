@@ -359,7 +359,7 @@ print(const Population& pop, boost::filesystem::path file)
         if (ofs)
         {
             boost::archive::xml_oarchive oa(ofs);
-            ofs << boost::serialization::make_nvp("Population", pop);
+            oa << boost::serialization::make_nvp("Population", pop);
         }
     }
 }
