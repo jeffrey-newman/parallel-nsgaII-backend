@@ -513,8 +513,8 @@ public:
                     &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
                 // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                 {
-                    (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
-                    (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                    (*population)[s_results.tag() - 1]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
+                    (*population)[s_results.tag() - 1]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
                     results_received += 1;
                 }
             }
@@ -533,19 +533,17 @@ public:
             {
                 boost::mpi::status s_results = os.get();
                 if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s_results.source() << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
-
                 //Process received job
-                if (s_results.tag() <= population->size())
-                {
+
                     if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
                         &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
                         // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                     {
-                        (*population)[s_results.tag()]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
-                        (*population)[s_results.tag()]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                        (*population)[s_results.tag()-1]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
+                        (*population)[s_results.tag()-1]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
                         results_received += 1;
                     }
-                }
+
             }
         } while (os);
 
