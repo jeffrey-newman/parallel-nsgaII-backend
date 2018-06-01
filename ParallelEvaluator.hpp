@@ -149,7 +149,7 @@ public:
     makeLogFile(std::ofstream &logging_file, std::string & base_log_file_name, int _gen_count, std::string subdir_name)
     {
         std::string file_name = base_log_file_name;
-        if (_gen_count >= 0) file_name = file_name + "_" + std::to_string(
+        if (_gen_count >= 0) file_name = file_name + "_Gen" + std::to_string(
                 _gen_count);
         file_name = file_name + "_" + boost::asio::ip::host_name() + "_Rank" + std::to_string(world.rank()) + ".log";
 
@@ -179,9 +179,9 @@ public:
     deletePreviousLog(std::string & base_log_file_name, int _gen_count, std::string subdir_name)
     {
         std::string file_name = base_log_file_name;
-        if (_gen_count >= 0) file_name = file_name + "_" + std::to_string(
+        if (_gen_count >= 0) file_name = file_name + "_Gen" + std::to_string(
                 _gen_count);
-        file_name = file_name + "_" + boost::asio::ip::host_name() + ".log";
+        file_name = file_name + "_" + boost::asio::ip::host_name() + "_Rank" + std::to_string(world.rank()) + ".log";
 
         previous_log_file = log_directory / subdir_name /file_name ;
         if (this->delete_previous_logfile && !this->previous_log_file.empty())
