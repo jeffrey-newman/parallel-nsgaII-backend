@@ -10,6 +10,8 @@
 #define ParallelEvaluator_h
 
 #include <ctime>
+#include <chrono>
+#include <thread>
 #include <boost/mpi.hpp>
 #include "Evaluation.hpp"
 #include <boost/serialization/string.hpp>
@@ -836,6 +838,7 @@ class ParallelEvaluatePopClientNonBlocking : public ParallelEvaluatorClientBase
     typedef std::list<std::tuple<boost::mpi::request, int,  JobsDoneInfo> > JobsDoneList; //First is mpi_request, 2nd is job number, 3rd is tuple of objs, constraints, gen_num and decision vars
     JobsDoneList jobs_done;
     const int MAX_JOBS_ON_QUEUE = 20;
+    const int DELAY_REPEAT_PROBE = 1;
 //    int gen_number;
 
 public:
@@ -952,6 +955,17 @@ public:
 //                        break;
 //                    }
                     boost::optional<boost::mpi::status> s_is_job = world.iprobe(0, boost::mpi::any_tag);
+
+                    if(s_is_job)
+                    {
+                        // As a new job is sent out directly after a new generation or when a result is sent back (which may not arrive in time for the first probe), we delay just to make sure there is not a new message
+                    }
+                    else
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds{DELAY_REPEAT_PROBE});
+                        s_is_job = world.iprobe(0, boost::mpi::any_tag);
+                    }
+
                     if (s_is_job)
                     {
                         if (s_is_job.get().tag() != max_tag)
@@ -968,6 +982,8 @@ public:
                         else // I.e. there is a message indicating next generation has commenced....
                         {
                             // Then next generation has commenced.
+                            logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                         << " end of generation" << std::endl;
                             in_generation = false;
                             break;
                         }
@@ -989,11 +1005,21 @@ public:
                             //calc objective
                             if (!do_save)
                             {
+                                if (this->do_log > this->OFF)
+                                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                                 << " Evaluating job " << (job_2_do->first) << "without save" << std::endl;
                                 objs_and_constraints = eval(std::get<1>(job_2_do->second), std::get<2>(job_2_do->second));
                             }
                             else
                             {
+
+
                                 boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(job_2_do->first));
+
+                                if (this->do_log > this->OFF)
+                                    logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
+                                                 << " Evaluating job " << (job_2_do->first) << "with save at " << save_ind_dir.string().c_str() << std::endl;
+
                                 if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
                                 objs_and_constraints = eval(std::get<1>(job_2_do->second), std::get<2>(job_2_do->second), save_ind_dir);
                             }
@@ -1024,10 +1050,13 @@ public:
                         do_continue = false;
                         if (jobs_2_do.size() > MAX_JOBS_ON_QUEUE)
                         {
-                            Jobs2DoMultiSet::iterator old_job_2_do = jobs_2_do.end();
-                            if (std::get<0>(old_job_2_do->second) < gen_num)
+                            Jobs2DoMultiSet::iterator oldest_job_2_do = --(jobs_2_do.end());  //could use rbegin, but erase requires forward iterator
+                            if (std::get<0>(oldest_job_2_do->second) < gen_num)
                             {
-                                jobs_2_do.erase(old_job_2_do);
+                                if (this->do_log > this->OFF) logging_file << world.rank() << " " <<  boost::posix_time::second_clock::local_time()
+                                                                           << ": Truncating list of jobs to do. Removing job " << oldest_job_2_do->first
+                                                                           << "; " << oldest_job_2_do->second << std::endl;
+                                jobs_2_do.erase(oldest_job_2_do);
                                 do_continue = true;
                             }
                         }
