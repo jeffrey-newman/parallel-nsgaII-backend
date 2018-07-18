@@ -195,6 +195,31 @@ public:
         }
     }
 
+    Population(boost::filesystem::path file, ProblemDefinitions * defs):
+        valid_obj_and_constraints(false), valid_fronts(false)
+    {
+        if (!boost::filesystem::exists(file))
+        {
+            std::cerr << "Cannot construct pop from " << file << "; File does not exisit\n";
+        }
+        else
+        {
+            std::ifstream fs(file.string().c_str());
+            if (fs.is_open())
+            {
+                std::string line;
+
+                while (std::getline(fs, line)) {
+                    std::vector<IndividualSPtr>::push_back(IndividualSPtr(new Individual(line, defs)));
+                }
+            }
+            else
+            {
+                std::cerr << "Cannot construct pop from " << file << "; File could not be openned\n";
+            }
+        }
+    }
+
     void
     append(const Population & appending_pop)
     {
@@ -245,10 +270,11 @@ inline PopulationSPtr
 restore_population(boost::filesystem::path filename, ProblemDefinitionsSPtr defs)
 {
     PopulationSPtr pop(new Population);
+    ProblemDefinitions * defs_ptr = defs.get();
     std::string extension = filename.extension().string();
     if (extension == ".txt")
     {
-        pop.reset(new Population(filename, defs));
+        pop.reset(new Population(filename, defs_ptr));
     }
     else if(extension == ".xml")
     {
