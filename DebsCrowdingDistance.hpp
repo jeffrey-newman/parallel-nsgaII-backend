@@ -15,21 +15,21 @@
 #include "Comparator.hpp"
 //#include "DebsNondominatedSorting.hpp"
 
+typedef std::vector<std::pair<IndividualSPtr, double > > IndividualsWithCrowdingDistanceVec;
+
 inline
-std::vector<std::pair<IndividualSPtr, double > >
+IndividualsWithCrowdingDistanceVec
 calculateDebsCrowdingDistance(const Population & front_set)
 {
-
-
     typedef std::pair<IndividualSPtr, double> IndDistPair;
     std::vector<IndDistPair> distances;
-    BOOST_FOREACH(IndividualSPtr ind, front_set)
-                {
-                    distances.push_back(std::make_pair(ind, 0));
-                }
+	for(IndividualSPtr ind: front_set)
+	{
+		distances.push_back(std::make_pair(ind, 0));
+    }
 
     //calculate Crowding distance for solutions in the next dominated set.
-    for (int j = 0; j < (distances[0]).first->numberOfObjectives(); ++j)
+    for (int j = 0; j < (distances[0]).first->numOfObjectives(); ++j)
     {
         ObjectiveValueCompator obj_comparator(j);
         std::sort(distances.begin(), distances.end(), obj_comparator);
@@ -46,11 +46,10 @@ calculateDebsCrowdingDistance(const Population & front_set)
     }
 
 
-
-    BOOST_FOREACH(IndDistPair & ind, distances)
-                {
-                    ind.first->setCrowdingScore(ind.second);
-                }
+	for (IndDistPair & ind: distances)
+	{
+		ind.first->setCrowdingScore(ind.second);
+	}
 
     return (distances);
 }
@@ -61,10 +60,10 @@ calculateDebsCrowdingDistance(const PopulationSPtr pop)
 {
     std::vector< std::vector<std::pair<IndividualSPtr, double > > > crowd_dist_by_front;
     FrontsSPtr fronts = pop->getFronts();
-    BOOST_FOREACH(Front front, *fronts)
-                {
-                    crowd_dist_by_front.push_back(calculateDebsCrowdingDistance(front));
-                }
+	for (Front front : *fronts)
+	{
+		crowd_dist_by_front.push_back(calculateDebsCrowdingDistance(front));
+	}
     return (crowd_dist_by_front);
 }
 

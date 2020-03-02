@@ -36,12 +36,12 @@ public:
     {
         // Combine parent and offspring population
         Population combined_set;
-        for (int i = 0; i < previous_parent_pop->populationSize(); ++i)
+        for (Population::size_type i = 0; i < previous_parent_pop->populationSize(); ++i)
         {
             combined_set.push_back((*previous_parent_pop)[i]);
 //            (*previous_parent_pop)[i]->parent = true;
         }
-        for (int i = 0; i < previous_child_pop->populationSize(); ++i)
+        for (Population::size_type i = 0; i < previous_child_pop->populationSize(); ++i)
         {
             combined_set.push_back((*previous_child_pop)[i]);
 //            (*previous_child_pop)[i]->child = true;
@@ -58,14 +58,14 @@ public:
         {
             // assign distances (needed for tournament selection)
             calculateDebsCrowdingDistance((*front_sets)[i]);
-            BOOST_FOREACH(IndividualSPtr ind, (*front_sets)[i])
-            {
-                new_child_pop->push_back(ind);
-            }
+			for (IndividualSPtr ind : (*front_sets)[i])
+			{
+				new_child_pop->push_back(ind);
+			}
             ++i;
         }
         
-        int more_ind_need = previous_child_pop->populationSize() - new_child_pop->populationSize();
+        Population::size_type more_ind_need = previous_child_pop->populationSize() - new_child_pop->populationSize();
         
         if (more_ind_need > 0)
         {
@@ -75,7 +75,7 @@ public:
             DistanceComparator dist_comparator;
             std::sort(distances.begin(), distances.end(), dist_comparator);
             //fill up the new population with solutions with the greatest distance
-            for (int l = 0; l < more_ind_need; ++l)
+            for (Population::size_type l = 0; l < more_ind_need; ++l)
             {
                 new_child_pop->push_back(distances[l].first);
             }

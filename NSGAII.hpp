@@ -52,81 +52,81 @@ private:
     {
 
         std::ofstream logging_file;
-        if (this->do_log)
+        if (do_log)
         {
             std::string file_name = "nsgaii_initialise.log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            boost::filesystem::path log_file = log_directory / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
+            if (!logging_file.is_open()) do_log = OFF;
         }
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Initialising GA: \n";
-        this->gen_num = 0;
-        this->is_finished = false;
-        this->parents = _parents;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Initialising GA: \n";
+        gen_num = 0;
+        is_finished = false;
+        parents = _parents;
         if (save_dir.string() == "")
         {
-            this->pop_eval(this->parents);
+            pop_eval(parents);
         }
         else
         {
-            this->savePop(this->parents, save_dir, file_name_prefix);
+            savePop(parents, save_dir, file_name_prefix);
         }
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Initial population: \n" << this->parents;
-        this->parents->calcFronts();
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Initial population: \n" << parents;
+        parents->calcFronts();
 
     }
 
     virtual bool
     step_impl()
     {
-        ++this->gen_num;
+        ++gen_num;
 
         std::ofstream logging_file;
-        if (this->do_log)
+        if (do_log)
         {
-            std::string file_name = "nsgaii_gen" + std::to_string(this->gen_num) + ".log";
-            boost::filesystem::path log_file = this->log_directory / file_name;
+            std::string file_name = "nsgaii_gen" + std::to_string(gen_num) + ".log";
+            boost::filesystem::path log_file = log_directory / file_name;
             logging_file.open(log_file.string().c_str(), std::ios_base::out | std::ios_base::trunc);
-            if (!logging_file.is_open()) this->do_log = this->OFF;
+            if (!logging_file.is_open()) do_log = OFF;
         }
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Generation: " << this->gen_num << "\n";
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "parents: \n" << this->parents;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "Generation: " << gen_num << "\n";
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "parents: \n" << parents;
 
-        this->children = this->selection(this->parents);
+        children = selection(parents);
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter selection: \n" << this->children;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter selection: \n" << children;
 
-        this->crossover(this->children);
+        crossover(children);
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter crossover: \n" << this->children;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter crossover: \n" << children;
 
-        this->mutation(this->children);
+        mutation(children);
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter mutation: \n" << this->children;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "\n\n\nAfter mutation: \n" << children;
 
-        this->pop_eval(this->children);
+        pop_eval(children);
 
-        this->children = this->merge_calc_front_and_dist(this->parents, this->children);
+        children = merge_calc_front_and_dist(parents, children);
 
-        if (this->do_log > NSGAIIBase<RNG>::OFF)  logging_file << "After merge: \n" << this->children;
+        if (do_log > NSGAIIBase<RNG>::OFF)  logging_file << "After merge: \n" << children;
 
-        this->parents = this->children;
+        parents = children;
 
-        if (this->do_log)
+        if (do_log)
         {
             if (logging_file.is_open()) logging_file.close();
         }
 
-        return (this->my_checkpoints(this->parents));
+        return (my_checkpoints(parents));
     }
 
     virtual void
     evalPop(PopulationSPtr population, boost::filesystem::path & save_dir)
     {
-        this->pop_eval(population, save_dir);
+        pop_eval(population, save_dir);
     }
 };
 

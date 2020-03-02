@@ -25,7 +25,7 @@ class CrossoverBase
 {
 public:
     CrossoverBase():
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(default_rng_crossover)
@@ -34,7 +34,7 @@ public:
             }
 
     CrossoverBase(RNG & rng):
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(rng)
@@ -45,7 +45,7 @@ public:
     virtual void operator()(Individual & individal_1, Individual & individal_2) = 0;
 
 protected:
-    std::uniform_real_distribution<double> cross_uniform;
+    std::uniform_real_distribution<double> uniform_rand_distributn;
     unsigned seed_crossover;
     RNG default_rng_crossover;
     RNG & random_number_gen;
@@ -111,64 +111,59 @@ public:
     {
         //        individal_1.crossovered = true;
         //        individal_2.crossovered = true;
-        for (int j=0;j < individal_1.numberOfRealDecisionVariables(); ++j)
+        for (Individual::RealDVsT::size_type j=0;j < individal_1.numOfRealDVs(); ++j)
         {//for each real in chrom
             
-            double dvar_value_par1 = individal_1.getRealDV(j);
-            double dvar_value_par2 = individal_2.getRealDV(j);
-            const double & yl = individal_1.getRealLowerBound(j);//lower limt of variable j of ind i
-            const double & yu = individal_1.getRealUpperBound(j);//upper limt of variable j of ind i
+            double dv_val_parent1 = individal_1.getRealDV(j);
+            double dv_val_parent2 = individal_2.getRealDV(j);
+            const double & lower_bound_val = individal_1.getRealLowerBound(j);//lower limt of variable j of ind i
+            const double & upper_bound_val = individal_1.getRealUpperBound(j);//upper limt of variable j of ind i
 
 
-            //Sanity check. Otherwise NaN are produced.
-                if (dvar_value_par1 < yl)
+            //Sanity check. If dv vals are out of bounds, NaNs are produced.
+                if (dv_val_parent1 < lower_bound_val)
                 {
-                    std::cerr << "real decision variable " << dvar_value_par1 << " at place " << j << " out of bounds; setting to lower bound which is " << yl << std::endl;
-                    dvar_value_par1 = yl;
+                    std::cerr << "real decision variable " << dv_val_parent1 << " at place " << j << " out of bounds; setting to lower bound which is " << lower_bound_val << std::endl;
+                    dv_val_parent1 = lower_bound_val;
                 }
-                if (dvar_value_par1 > yu)
+                if (dv_val_parent1 > upper_bound_val)
                 {
-                    std::cerr << "input real decision variable " << dvar_value_par1 << " at place " << j << " out of bounds; setting to upper bound which is " << yu << std::endl;
-                    dvar_value_par1 = yu;
+                    std::cerr << "input real decision variable " << dv_val_parent1 << " at place " << j << " out of bounds; setting to upper bound which is " << upper_bound_val << std::endl;
+                    dv_val_parent1 = upper_bound_val;
                 }
-            if (dvar_value_par2 < yl)
+            if (dv_val_parent2 < lower_bound_val)
             {
-                std::cerr << "real decision variable " << dvar_value_par2 << " at place " << j << " out of bounds; setting to lower bound which is " << yl << std::endl;
-                dvar_value_par2 = yl;
+                std::cerr << "real decision variable " << dv_val_parent2 << " at place " << j << " out of bounds; setting to lower bound which is " << lower_bound_val << std::endl;
+                dv_val_parent2 = lower_bound_val;
             }
-            if (dvar_value_par2 > yu)
+            if (dv_val_parent2 > upper_bound_val)
             {
-                std::cerr << "input real decision variable " << dvar_value_par2 << " at place " << j << " out of bounds; setting to upper bound which is " << yu << std::endl;
-                dvar_value_par2 = yu;
+                std::cerr << "input real decision variable " << dv_val_parent2 << " at place " << j << " out of bounds; setting to upper bound which is " << upper_bound_val << std::endl;
+                dv_val_parent2 = upper_bound_val;
             }
-
-
-
-
-
             
-            if (this->cross_uniform(this->random_number_gen)<=0.5) //only half of the bits in chrom2 will be crossed
+            if (uniform_rand_distributn(random_number_gen)<=0.5) //only half of the bits in chrom2 will be crossed
             {
                 double y1, y2;
-                if (fabs( dvar_value_par1 - dvar_value_par2) > eps) //values of two parents are different
+                if (fabs( dv_val_parent1 - dv_val_parent2) > eps) //values of two parents are different
                 {
-                    if (dvar_value_par2 > dvar_value_par1)
+                    if (dv_val_parent2 > dv_val_parent1)
                     {
-                        y2 = dvar_value_par2; //y2 is the parent that has larger value
-                        y1 = dvar_value_par1;
+                        y2 = dv_val_parent2; //y2 is the parent that has larger value
+                        y1 = dv_val_parent1;
                     }
                     else
                     {
-                        y2 = dvar_value_par1;
-                        y1 = dvar_value_par2;
+                        y2 = dv_val_parent1;
+                        y1 = dv_val_parent2;
                     }
                     
                     //for the first child
-                    double beta = 1.0 + (2.0 * (y1 - yl) / (y2 - y1));
+                    double beta = 1.0 + (2.0 * (y1 - lower_bound_val) / (y2 - y1));
                     double alpha = 2.0 - pow(beta, -(eta_c + 1.0));
                     double betaq;
                     
-                    double rand = this->cross_uniform(this->random_number_gen);
+                    double rand = uniform_rand_distributn(random_number_gen);
                     if (rand <= (1.0 / alpha))
                         betaq = pow((rand * alpha), (1.0 / (eta_c + 1.0)));
                     else
@@ -177,7 +172,7 @@ public:
                     double dvar_val_child1 = 0.5 * ((y1 + y2) - betaq * (y2 - y1));
                     
                     //for the second child
-                    beta = 1.0 + (2.0 * (yu - y2) / (y2 - y1));
+                    beta = 1.0 + (2.0 * (upper_bound_val - y2) / (y2 - y1));
                     alpha = 2.0 - pow(beta, -(eta_c+1.0));
                     if (rand <= (1.0 / alpha))
                         betaq = pow((rand * alpha), (1.0 / (eta_c + 1.0)));
@@ -186,12 +181,12 @@ public:
                     
                     double dvar_val_child2 = 0.5 * ((y1 + y2) + betaq * (y2 - y1));
                     
-                    if (dvar_val_child1<yl) dvar_val_child1=yl;
-                    if (dvar_val_child1>yu) dvar_val_child1=yu;
-                    if (dvar_val_child2<yl) dvar_val_child2=yl;
-                    if (dvar_val_child2>yu) dvar_val_child2=y2;
+                    if (dvar_val_child1<lower_bound_val) dvar_val_child1=lower_bound_val;
+                    if (dvar_val_child1>upper_bound_val) dvar_val_child1=upper_bound_val;
+                    if (dvar_val_child2<lower_bound_val) dvar_val_child2=lower_bound_val;
+                    if (dvar_val_child2>upper_bound_val) dvar_val_child2=y2;
                     
-                    if (this->cross_uniform(this->random_number_gen)<=0.5)
+                    if (uniform_rand_distributn(random_number_gen)<=0.5)
                     {
                         individal_1.setRealDV(j, dvar_val_child2);
                         individal_2.setRealDV(j, dvar_val_child1);
@@ -238,22 +233,36 @@ public:
     
     virtual void operator()(Individual & individal_1, Individual & individal_2)
     {
-        //        individal_1.crossovered = true;
-        //        individal_2.crossovered = true;
+        /// First we crossover the unordered DVs
         //Determine location of crossover.
-        int location = int(std::ceil(this->cross_uniform(this->random_number_gen) * (individal_1.numberOfIntDecisionVariables() - 1)));
+        int location = int(std::ceil(uniform_rand_distributn(random_number_gen) * (individal_1.numOfUnorderedDVs() - 1)));
         
         // To the right of location, the chromosones are crossovered.
         
-        for (int j=location;j < individal_1.numberOfIntDecisionVariables(); ++j)
+        for (int j=location;j < individal_1.numOfUnorderedDVs(); ++j)
         {//for each real in chrom
             
 //
-                int val = individal_1.getIntDV(j);
-                individal_1.setIntDV(j, individal_2.getIntDV(j));
-                individal_2.setIntDV(j, val);                
+                int val = individal_1.getUnorderedDV(j);
+                individal_1.setUnorderedDV(j, individal_2.getUnorderedDV(j));
+                individal_2.setUnorderedDV(j, val);                
 
         }
+
+
+		/// Second, we crossover the ordered DVs
+		location = int(std::ceil(uniform_rand_distributn(random_number_gen) * (individal_1.numOfOrderedDVs() - 1)));
+
+		// To the right of location, the chromosones are crossovered.
+
+		for (int j = location; j < individal_1.numOfOrderedDVs(); ++j)
+		{//for each real in chrom
+			int val = individal_1.getOrderedDV(j);
+			individal_1.setOrderedDV(j, individal_2.getOrderedDV(j));
+			individal_2.setOrderedDV(j, val);
+
+		}
+
         
     }
     
@@ -275,7 +284,7 @@ public:
 template <typename RNG = std::mt19937>
 class CombinedRealIntCrossover
 {
-    std::uniform_real_distribution<double> cross_uniform;
+    std::uniform_real_distribution<double> uniform_rand_distributn;
     unsigned seed_crossover;
     RNG default_rng_crossover;
     RNG & random_number_gen;
@@ -291,7 +300,7 @@ class CombinedRealIntCrossover
 public:
 
     CombinedRealIntCrossover():
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(default_rng_crossover),
@@ -308,7 +317,7 @@ public:
     }
 
     CombinedRealIntCrossover(double & _probability_crossover):
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(default_rng_crossover),
@@ -325,7 +334,7 @@ public:
     }
 
     CombinedRealIntCrossover(double & _probability_crossover, CrossoverBase<RNG> & _real_xover, CrossoverBase<RNG> & _int_xover) :
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(default_rng_crossover),
@@ -342,7 +351,7 @@ public:
     }
 
     CombinedRealIntCrossover(RNG & rng, double & _probability_crossover):
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(rng),
@@ -359,7 +368,7 @@ public:
     }
 
     CombinedRealIntCrossover(RNG & rng, double & _probability_crossover, CrossoverBase<RNG> & _real_xover, CrossoverBase<RNG> & _int_xover) :
-            cross_uniform(0.0, 1.0),
+            uniform_rand_distributn(0.0, 1.0),
             seed_crossover(std::chrono::system_clock::now().time_since_epoch().count()),
             default_rng_crossover(seed_crossover),
             random_number_gen(rng),
@@ -385,7 +394,7 @@ public:
     operator()(PopulationSPtr pop)
     {
         pop->invalidate();
-        std::shuffle(pop->begin(), pop->end(), this->random_number_gen);
+        std::shuffle(pop->begin(), pop->end(), random_number_gen);
         
 //        int count = 0;
 //        int x_count = 0;
@@ -396,7 +405,7 @@ public:
             {
 //                std::cout << "crossover ind " << i << std::endl;
 //            ++count;
-                double rand = this->cross_uniform(this->random_number_gen);
+                double rand = uniform_rand_distributn(random_number_gen);
 //            std::cout << rand << "\n";
                 if (rand <= probability_crossover)
                 {
@@ -419,7 +428,7 @@ public:
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-            ar & BOOST_SERIALIZATION_NVP(probability_crossover);
+        ar & BOOST_SERIALIZATION_NVP(probability_crossover);
         ar & BOOST_SERIALIZATION_NVP(real_xover);
         ar & BOOST_SERIALIZATION_NVP(int_xover);
     }

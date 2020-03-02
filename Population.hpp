@@ -14,118 +14,15 @@
 #include <random>
 
 #include <boost/filesystem.hpp>
-#include "Individual.hpp"
-#include "Comparator.hpp"
-
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
 
+#include "Individual.hpp"
+#include "Comparator.hpp"
 
-//class Population;
-//typedef boost::shared_ptr<Population> PopulationSPtr;
-//typedef Population Front;
-//typedef PopulationSPtr FrontSPtr;
-//typedef std::vector<Front> Fronts;
-//typedef boost::shared_ptr<Fronts > FrontsSPtr;
-//
-//class Population : public std::vector<IndividualSPtr>
-//{
-//private:
-//
-//    FrontsSPtr front_sets;
-//    bool valid_obj_and_constraints;
-//    bool valid_fronts;
-//
-//public:
-//    Population();
-//
-//    FrontsSPtr
-//    getFronts();
-//
-//    Population(int population_size, ProblemDefinitionsSPtr defs);
-//
-//    Population(boost::filesystem::path file, ProblemDefinitionsSPtr defs);
-//
-//    void append(const Population & appending_pop);
-//
-//    const unsigned long populationSize() const;
-//
-//    void push_back(IndividualSPtr ind);
-//
-//    void invalidate();
-//    void validateObjAndConstraints();
-//
-//    friend class boost::serialization::access;
-//    template<class Archive>
-//    void serialize(Archive & ar, const unsigned int version)
-//    {
-//        ar & boost::serialization::make_nvp("PopVec", boost::serialization::base_object<std::vector<IndividualSPtr> >(*this) );
-////            ar &  BOOST_SERIALIZATION_BASE_OBJECT_NVP(std::vector<Individual>);
-//    }
-//
-//    friend std::ostream& operator<<(std::ostream& os, const Population& pop);
-//};
-//
-//
-//
-//PopulationSPtr
-//restore_population(boost::filesystem::path filename);
-//
-//
-//template<typename RNG>
-//PopulationSPtr
-//intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitionsSPtr defs, RNG & rng)
-//{
-//    PopulationSPtr pop(new Population(population_size, defs));
-//
-//
-//    for (int i = 0; i < defs->real_lowerbounds.size(); ++i)
-//    {
-//        std::uniform_real_distribution<double> uniform(defs->real_lowerbounds[i],defs->real_upperbounds[i]);
-//
-//        BOOST_FOREACH(IndividualSPtr ind, *pop)
-//                    {
-//                        ind->setRealDV(i, uniform(rng));
-//                    }
-//
-//    }
-//
-//    for (int i = 0; i < defs->int_lowerbounds.size(); ++i)
-//    {
-//        std::uniform_int_distribution<int> uniform(defs->int_lowerbounds[i],defs->int_upperbounds[i]);
-//
-//        BOOST_FOREACH(IndividualSPtr ind, *pop)
-//                    {
-//                        ind->setIntDV(i, uniform(rng));
-//                    }
-//    }
-//    return (pop);
-//
-//}
-//
-//
-//std::ostream& operator<<(std::ostream& os, const PopulationSPtr pop);
-//
-//std::ostream& operator<<(std::ostream& os, const Population& pop);
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-class Population;
-typedef boost::shared_ptr<Population> PopulationSPtr;
-typedef Population Front;
-typedef PopulationSPtr FrontSPtr;
-typedef std::vector<Front> Fronts;
-typedef boost::shared_ptr<Fronts > FrontsSPtr;
-inline FrontsSPtr debNonDominatedSort(const Population & population_ref);
 
 class Population : public std::vector<IndividualSPtr>
 {
@@ -227,7 +124,7 @@ public:
         valid_fronts = false;
     }
 
-    const unsigned long
+    const std::vector<IndividualSPtr>::size_type
     populationSize() const
     {
         return (this->size());
@@ -314,13 +211,13 @@ intialisePopulationRandomDVAssignment(int population_size, ProblemDefinitionsSPt
 
     }
 
-    for (int i = 0; i < defs->int_lowerbounds.size(); ++i)
+    for (int i = 0; i < defs->unordered_lowerbounds.size(); ++i)
     {
-        std::uniform_int_distribution<int> uniform(defs->int_lowerbounds[i],defs->int_upperbounds[i]);
+        std::uniform_int_distribution<int> uniform(defs->unordered_lowerbounds[i],defs->unordered_upperbounds[i]);
 
         BOOST_FOREACH(IndividualSPtr ind, *pop)
                     {
-                        ind->setIntDV(i, uniform(rng));
+                        ind->setUnorderedDV(i, uniform(rng));
                     }
     }
     return (pop);

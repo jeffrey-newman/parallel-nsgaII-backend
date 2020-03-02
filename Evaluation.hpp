@@ -18,6 +18,12 @@
 class ObjectivesAndConstraintsBase
 {
 public:
+
+	typedef ProblemDefinitions::ObjectivesAndConstraintsT ObjectivesAndConstraintsT;
+	typedef ProblemDefinitions::RealDVsT RealDVsT;
+	typedef ProblemDefinitions::UnorderedDVsT UnorderedDVsT;
+	typedef ProblemDefinitions::OrderedDVsT OrderedDVsT;
+
     /**
      * Evaluate a solution.
      * @param real_decision_vars
@@ -25,8 +31,9 @@ public:
      * @return
      */
     virtual
-    std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars) = 0;
+	ObjectivesAndConstraintsT
+    operator()(const RealDVsT & real_decision_vars, const UnorderedDVsT & unordered_decision_vars, 
+		const OrderedDVsT & ordered_dvs) = 0;
 
     /**
      * Evaluate a solution, including saving details of the evaluation in save_dir.
@@ -36,26 +43,29 @@ public:
      * @return
      */
     virtual
-    std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, const boost::filesystem::path & save_dir) = 0;
+	ObjectivesAndConstraintsT
+    operator()(const RealDVsT& real_decision_vars, const UnorderedDVsT& unordered_decision_vars, 
+		const OrderedDVsT& ordered_dvs, const boost::filesystem::path & save_dir) = 0;
 };
 
 class DummyObjectivesAndConstraints : public ObjectivesAndConstraintsBase
 {
 private:
-    std::pair<std::vector<double>, std::vector<double> > dummy_return;
+    //std::pair<std::vector<double>, std::vector<double> > dummy_return;
     
 public:
-    std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars)
+	ObjectivesAndConstraintsT
+    operator()(const RealDVsT& real_decision_vars, const UnorderedDVsT& unordered_decision_vars,
+		const OrderedDVsT& ordered_dvs)
     {
-        return (dummy_return);
+        return (std::pair<std::vector<double>, std::vector<double> >());
     }
 
-    std::pair<std::vector<double>, std::vector<double> > &
-    operator()(const std::vector<double> & real_decision_vars, const std::vector<int> & int_decision_vars, const boost::filesystem::path & save_dir)
+	ObjectivesAndConstraintsT
+    operator()(const RealDVsT& real_decision_vars, const UnorderedDVsT& unordered_decision_vars, 
+		const OrderedDVsT& ordered_dvs, const boost::filesystem::path& save_dir)
     {
-        return (dummy_return);
+        return (std::pair<std::vector<double>, std::vector<double> >());
     };
 };
 
@@ -96,7 +106,7 @@ public:
     {
         for(IndividualSPtr ind: *population)
         {
-            ind->getMutableObjectivesAndConstraints() = eval(ind->getRealDVVector(), ind->getIntDVVector());
+            ind->setObjectivesAndConstraints(eval(ind->getRealDVVector(), ind->getUnorderedDVVector(), ind->getOrderedDVVector()));
         }
     }
 
@@ -108,7 +118,7 @@ public:
                     {
                         boost::filesystem::path save_ind_dir = save_dir / ("individual_" + std::to_string(i++));
                         if (!boost::filesystem::exists(save_ind_dir)) boost::filesystem::create_directories(save_ind_dir);
-                        ind->getMutableObjectivesAndConstraints() = eval(ind->getRealDVVector(), ind->getIntDVVector(), save_ind_dir);
+						ind->setObjectivesAndConstraints(eval(ind->getRealDVVector(), ind->getUnorderedDVVector(), ind->getOrderedDVVector(), save_ind_dir));
                     }
     }
 };

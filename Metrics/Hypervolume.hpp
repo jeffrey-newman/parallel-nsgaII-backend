@@ -30,10 +30,11 @@ public:
 
     enum DoTerminate {TERMINATION, NO_TERMINATION};
 private:
+	typedef std::vector<double> Coordinate;
 
-    std::vector<double> ref_point;
-    std::vector<double> unitize_point;
-    std::vector<double> axis_lengths;
+	Coordinate ref_point;
+	Coordinate unitize_point;
+	Coordinate axis_lengths;
     int dimension;
     double* ref_point_array;
     double volume;
@@ -81,13 +82,13 @@ public:
         {
             calc_ref_first_gen = false;
             ref_point = _ref_point.get();
-            axis_lengths = std::vector<double>(ref_point.size(), 0.0);
-            dimension = ref_point.size();
+            axis_lengths = Coordinate(ref_point.size(), 0.0);
+            dimension = int(ref_point.size());
             delete[] ref_point_array;
             ref_point_array = new double[dimension];
-            for (int var = 0; var < ref_point.size(); ++var)
+            for (int i = 0; i < int(ref_point.size()); ++i)
             {
-                ref_point_array[var] = ref_point[var];
+                ref_point_array[i] = ref_point[i];
             }
             
         }
@@ -239,8 +240,8 @@ public:
             else
             {
                 Front first_front = population->getFronts()->at(0);
-                dataNumber = first_front.size();
-                dimension = population->at(0)->numberOfObjectives();
+                dataNumber = int(first_front.size());
+                dimension = int(population->at(0)->numOfObjectives());
                 
                 ref_point.resize(dimension,0);
 //                double* data = new double[dataNumber * dimension];
@@ -249,13 +250,13 @@ public:
                 for (int i = 0; i < dimension; ++i)
                 {
                     // if maximise objective, find minimum value of obj
-                    if (population->at(0)->isMinimiseOrMaximise(i) == MAXIMISATION)
+                    if (population->at(0)->isMinimiseOrMaximise(i) == ProblemDefinitions::MAXIMISATION)
                     {
                         ref_point[i] = std::numeric_limits<double>::max();
                     }
                     
                     // in minimise objecttive, find max value of obj
-                    if (population->at(0)->isMinimiseOrMaximise(i) == MINIMISATION)
+                    if (population->at(0)->isMinimiseOrMaximise(i) == ProblemDefinitions::MINIMISATION)
                     {
                         ref_point[i] = std::numeric_limits<double>::min();
                     }
@@ -266,13 +267,13 @@ public:
                     for (int i = 0; i < dimension; ++i)
                     {
                         // if maximise objective, find minimum value of obj
-                        if ((ind->isMinimiseOrMaximise(i) == MAXIMISATION) && (ind->getObjective(i) < ref_point[i]))
+                        if ((ind->isMinimiseOrMaximise(i) == ProblemDefinitions::MAXIMISATION) && (ind->getObjective(i) < ref_point[i]))
                         {
                             ref_point[i] = ind->getObjective(i);
                         }
                         
                         // in minimise objecttive, find max value of obj
-                        if ((ind->isMinimiseOrMaximise(i) == MINIMISATION)  && (ind->getObjective(i) > ref_point[i]))
+                        if ((ind->isMinimiseOrMaximise(i) == ProblemDefinitions::MINIMISATION)  && (ind->getObjective(i) > ref_point[i]))
                         {
                             ref_point[i] = ind->getObjective(i);
                         }
@@ -308,8 +309,8 @@ public:
 
 
                 Front first_front = population->getFronts()->at(0);
-                dataNumber = first_front.size();
-                assert(population->at(0)->numberOfObjectives() == dimension);
+                dataNumber = int(first_front.size());
+                assert(population->at(0)->numOfObjectives() == dimension);
                 double* data = new double[dataNumber * dimension];
                 int j = 0;
 
@@ -318,10 +319,10 @@ public:
 
 //                    if (do_log > OFF) log_stream.get() << "Hello Hypervolume again\n";
                     if (do_log > OFF) log_stream.get() << "Hypervolume: Front point " << j << ": ";
-                    for (int i = 0; i < ind->numberOfObjectives(); ++i)
+                    for (int i = 0; i < ind->numOfObjectives(); ++i)
                     {
                         if (do_log > OFF) log_stream.get() << ind->getObjective(i) << " -> ";
-                        if (ind->isMinimiseOrMaximise(i) == MINIMISATION)
+                        if (ind->isMinimiseOrMaximise(i) == ProblemDefinitions::MINIMISATION)
                         {
                             data[j] = ind->getObjective(i) - ref_point[i];
                             if (unitize)

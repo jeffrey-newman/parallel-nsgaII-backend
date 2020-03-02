@@ -20,9 +20,9 @@ public:
 
     static
     bool
-    compareObjective(const Individual& ind1, const Individual& ind2, int index)
+    compareObjective(const Individual& ind1, const Individual& ind2, ProblemDefinitions::ObjectivesT::size_type index)
     {
-        if (ind1.isMinimiseOrMaximise(index) == MINIMISATION)
+        if (ind1.isMinimiseOrMaximise(index) == ProblemDefinitions::MINIMISATION)
         {
             return (ind1.getObjective(index) < ind2.getObjective(index));
         }
@@ -31,16 +31,16 @@ public:
 
     static
     bool
-    compareObjective(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
+    compareObjective(const IndividualSPtr ind1, const IndividualSPtr ind2, ProblemDefinitions::ObjectivesT::size_type index)
     {
         return (compareObjective(*ind1, *ind2, index));
     }
 
     static
     int
-    compareObjective2(const Individual& ind1, const Individual& ind2, int index)
+    compareObjective2(const Individual& ind1, const Individual& ind2, ProblemDefinitions::ObjectivesT::size_type index)
     {
-        if (ind1.isMinimiseOrMaximise(index) == MINIMISATION)
+        if (ind1.isMinimiseOrMaximise(index) == ProblemDefinitions::MINIMISATION)
         {
             if (ind1.getObjective(index) < ind2.getObjective(index)) return 1;
             if (ind1.getObjective(index) == ind2.getObjective(index)) return 0;
@@ -57,7 +57,7 @@ public:
 
     static
     int
-    compareObjective2(const IndividualSPtr ind1, const IndividualSPtr ind2, int index)
+    compareObjective2(const IndividualSPtr ind1, const IndividualSPtr ind2, ProblemDefinitions::ObjectivesT::size_type index)
     {
         return (compareObjective2(*ind1, *ind2, index));
     }
@@ -77,7 +77,7 @@ public:
         double rel_violation_ind1 = 0;
         double rel_violation_ind2 = 0;
 
-        for (int i = 0; i < ind1.numberOfConstraints(); ++i)
+        for (ProblemDefinitions::ConstraintsT::size_type i = 0; i < ind1.numOfConstraints(); ++i)
         {
             const double & constraint1 = ind1.getConstraint(i);
             const double & constraint2 = ind2.getConstraint(i);
@@ -153,7 +153,7 @@ public:
 
             int flag1 = 0;
             int flag2 = 0;
-            for (int j=0; j < ind1.numberOfObjectives(); ++j)
+            for (ProblemDefinitions::ObjectivesT::size_type j=0; j < ind1.numOfObjectives(); ++j)
             {
                 int which_is_better = compareObjective2(ind1, ind2, j);
                 if (which_is_better == 1) flag1 = 1;

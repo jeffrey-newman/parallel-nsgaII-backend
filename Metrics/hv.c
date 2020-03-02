@@ -498,8 +498,8 @@ avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
  end of functions from AVL-tree library.
 *******************************************************************************/
 
-#if !defined(VARIANT) || VARIANT < 1 || VARIANT > 4
-#error VARIANT must be either 1, 2, 3 or 4, e.g., 'make VARIANT=4'
+#if !defined(HYPERVOLUME_CALCULATN_VARIANT) || HYPERVOLUME_CALCULATN_VARIANT < 1 || HYPERVOLUME_CALCULATN_VARIANT > 4
+#error HYPERVOLUME_CALCULATN_VARIANT must be either 1, 2, 3 or 4, e.g., 'make HYPERVOLUME_CALCULATN_VARIANT=4'
 #endif
 
 #if __GNUC__ >= 3
@@ -508,13 +508,13 @@ avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
 # define __hv_unused    /* no 'unused' attribute available */
 #endif
 
-#if VARIANT < 3
+#if HYPERVOLUME_CALCULATN_VARIANT < 3
 # define __variant3_only __hv_unused
 #else
 # define __variant3_only
 #endif
 
-#if VARIANT < 2
+#if HYPERVOLUME_CALCULATN_VARIANT < 2
 # define __variant2_only __hv_unused
 #else
 # define __variant2_only
@@ -527,16 +527,16 @@ typedef struct dlnode {
     struct avl_node_t * tnode;
     int ignore;
     int ignore_best; //used in define_order
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
     double *area;                 /* Area */
 #endif
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
     double *vol;                  /* Volume */
 #endif
 } dlnode_t;
 
 static avl_tree_t *tree;
-#if VARIANT < 4
+#if HYPERVOLUME_CALCULATN_VARIANT < 4
 int stop_dimension = 1; /* default: stop on dimension 2 */
 #else
 int stop_dimension = 2; /* default: stop on dimension 3 */
@@ -578,10 +578,10 @@ setup_cdllist(double *data, int d, int n)
     head->prev = malloc( d * (n+1) * sizeof(dlnode_t*));
     head->tnode = malloc ((n+1) * sizeof(avl_node_t));
 
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
     head->area = malloc(d * (n+1) * sizeof(double));
 #endif
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
     head->vol = malloc(d * (n+1) * sizeof(double));
 #endif
 
@@ -591,10 +591,10 @@ setup_cdllist(double *data, int d, int n)
         head[i].next = head[i-1].next + d;
         head[i].prev = head[i-1].prev + d;
         head[i].tnode = head[i-1].tnode + 1;
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
         head[i].area = head[i-1].area + d;
 #endif
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
         head[i].vol = head[i-1].vol + d;
 #endif
     }
@@ -632,10 +632,10 @@ static void free_cdllist(dlnode_t * head)
     free(head->tnode); /* Frees _all_ nodes. */
     free(head->next);
     free(head->prev);
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
     free(head->area);
 #endif
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
     free(head->vol);
 #endif
     free(head);
@@ -648,14 +648,14 @@ static void delete (dlnode_t *nodep, int dim, double * bound __variant3_only)
     for (i = stop_dimension; i < dim; i++) {
         nodep->prev[i]->next[i] = nodep->next[i];
         nodep->next[i]->prev[i] = nodep->prev[i];
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
         if (bound[i] > nodep->x[i])
             bound[i] = nodep->x[i];
 #endif
   }
 }
 
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
 static void delete_dom (dlnode_t *nodep, int dim)
 {
     int i;
@@ -674,14 +674,14 @@ static void reinsert (dlnode_t *nodep, int dim, double * bound __variant3_only)
     for (i = stop_dimension; i < dim; i++) {
         nodep->prev[i]->next[i] = nodep;
         nodep->next[i]->prev[i] = nodep;
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
         if (bound[i] > nodep->x[i])
             bound[i] = nodep->x[i];
 #endif
     }
 }
 
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
 static void reinsert_dom (dlnode_t *nodep, int dim)
 {
     int i;
@@ -691,7 +691,7 @@ static void reinsert_dom (dlnode_t *nodep, int dim)
         nodep->next[i]->prev[i] = nodep;
         nodep->area[i] = p->area[i];
 
-    #if VARIANT >= 3
+    #if HYPERVOLUME_CALCULATN_VARIANT >= 3
         nodep->vol[i] = p->vol[i] + p->area[i] * (nodep->x[i] - p->x[i]);
     #endif
     }
@@ -709,10 +709,10 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
         dlnode_t *p0 = list;
         dlnode_t *p1 = list->prev[dim];
         double hyperv = 0;
-#if VARIANT == 1
+#if HYPERVOLUME_CALCULATN_VARIANT == 1
         double hypera;
 #endif
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
         dlnode_t *pp;
         for (pp = p1; pp->x; pp = pp->prev[dim]) {
             if (pp->ignore < dim)
@@ -720,7 +720,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
         }
 #endif
         while (c > 1
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
                /* We delete all points x[dim] > bound[dim]. In case of
                   repeated coordinates, we also delete all points
                   x[dim] == bound[dim] except one. */
@@ -729,7 +729,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
 #endif
             ) {
             p0 = p1;
-#if VARIANT >=2
+#if HYPERVOLUME_CALCULATN_VARIANT >=2
             if (p0->ignore >= dim)
                 delete_dom(p0, dim);
             else
@@ -741,16 +741,16 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
             c--;
         }
 
-#if VARIANT == 1
+#if HYPERVOLUME_CALCULATN_VARIANT == 1
         hypera = hv_recursive(list, dim-1, c, ref, bound);
 
-#elif VARIANT == 2
+#elif HYPERVOLUME_CALCULATN_VARIANT == 2
         int i;
         p1->area[0] = 1;
         for (i = 1; i <= dim; i++)
             p1->area[i] = p1->area[i-1] * (ref[i-1] - p1->x[i-1]);
         
-#elif VARIANT >= 3
+#elif HYPERVOLUME_CALCULATN_VARIANT >= 3
         if (c > 1) {
             hyperv = p1->prev[dim]->vol[dim] + p1->prev[dim]->area[dim]
                 * (p1->x[dim] - p1->prev[dim]->x[dim]);
@@ -777,38 +777,38 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
 
         while (p0->x != NULL) {
 
-#if VARIANT == 1
+#if HYPERVOLUME_CALCULATN_VARIANT == 1
             hyperv += hypera * (p0->x[dim] - p1->x[dim]);
 #else
             hyperv += p1->area[dim] * (p0->x[dim] - p1->x[dim]);
 #endif
             c++;
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
             if (p0->ignore >= dim) {
                 reinsert_dom (p0, dim);
                 p0->area[dim] = p1->area[dim];
             } else {
 #endif
                 reinsert (p0, dim, bound);
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
                 p0->area[dim] = hv_recursive (list, dim-1, c, ref, bound);
                 if (p0->ignore == (dim - 1))
                     p0->ignore = dim;
             }
-#elif VARIANT == 1
+#elif HYPERVOLUME_CALCULATN_VARIANT == 1
             hypera = hv_recursive (list, dim-1, c, ref, NULL);
 #endif
             p1 = p0;
             p0 = p0->next[dim];
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
             p1->vol[dim] = hyperv;
 #endif
         }
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
         bound[dim] = p1->x[dim];
 #endif
 
-#if VARIANT == 1
+#if HYPERVOLUME_CALCULATN_VARIANT == 1
         hyperv += hypera * (ref[dim] - p1->x[dim]);
 #else
         hyperv += p1->area[dim] * (ref[dim] - p1->x[dim]);
@@ -825,7 +825,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
         double hypera;
         double height;
         
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
         dlnode_t *pp = list->prev[2];
         avl_node_t *tnode;
 
@@ -882,7 +882,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
 
         bound[2] = list->prev[2]->x[2];
 #else 
-/* VARIANT <= 2 */
+/* HYPERVOLUME_CALCULATN_VARIANT <= 2 */
         dlnode_t *pp = list->next[2];
         hyperv = 0;
 
@@ -899,16 +899,16 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
             avl_node_t *tnode;
             int cmp;
 
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
             pp->vol[2] = hyperv;
 #endif  
             height = (pp == list->prev[2])
                 ? ref[2] - pp->x[2]
                 : pp->next[2]->x[2] - pp->x[2];
-#if VARIANT >= 2
+#if HYPERVOLUME_CALCULATN_VARIANT >= 2
             if (pp->ignore >= 2) {
                 hyperv += hypera * height;
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
                 pp->area[2] = hypera;
 #endif
                 continue;
@@ -924,7 +924,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
             }
             if (nxt_ip[0] <= pp->x[0]) {
                 pp->ignore = 2;
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
                 pp->tnode->domr = pp->x[2];
                 pp->area[2] = hypera;
 #endif
@@ -938,7 +938,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
             } else {
                 avl_insert_after(tree, tnode, pp->tnode);
             }
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
             pp->tnode->domr = ref[2];
 #endif
             if (tnode != NULL) {
@@ -957,7 +957,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
                             break; /* prv is not dominated by pp */
                         cur_ip = prv_ip;
                         avl_unlink_node(tree,tnode);
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
                         /* saves the value of x[2] of the point that
                            dominates tnode. */
                         tnode->domr = pp->x[2];
@@ -966,7 +966,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
                     }
                     
                     avl_unlink_node(tree, tnode);
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
                     tnode->domr = pp->x[2];
 #endif
                     if (!tnode->prev) {
@@ -981,7 +981,7 @@ hv_recursive(dlnode_t *list, int dim, int c, const double * ref,
             
             if (height > 0)
                 hyperv += hypera * height;
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
             pp->area[2] = hypera;
 #endif
         }
@@ -1458,7 +1458,7 @@ double fpli_hv(double *data, int d, int n, const double *ref)
     double * bound = NULL;
     int i;
 
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
     bound = malloc (d * sizeof(double));
     for (i = 0; i < d; i++) bound[i] = -DBL_MAX;
 #endif
@@ -1498,7 +1498,7 @@ double fpli_hv_order(double *data, int d, int n, const double *ref, int *order,
     double * bound = NULL;
     double * ref_ord = (double *) malloc(d * sizeof(double));
         
-#if VARIANT >= 3
+#if HYPERVOLUME_CALCULATN_VARIANT >= 3
     int i;
 
     bound = malloc (d * sizeof(double));

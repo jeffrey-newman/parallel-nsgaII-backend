@@ -60,7 +60,7 @@ debNonDominatedSort(const Population & population_ref)
 
 
     std::vector<DominationInfo> population_set(population_ref.size());
-    for (int i = 0; i < population_ref.size(); ++i)
+    for (std::vector<DominationInfo>::size_type i = 0; i < population_ref.size(); ++i)
     {
         population_set[i].ind =  population_ref[i];
     }
@@ -76,14 +76,14 @@ debNonDominatedSort(const Population & population_ref)
     const int P_DOMINATES = 1;
     const int Q_DOMINATES = 2;
 
-    for (int j = 0; j < population_set.size(); ++j)
+    for (std::vector<DominationInfo>::size_type j = 0; j < population_set.size(); ++j)
     {
         DominationInfo & p = population_set[j];
         IndividualSPtr p_ptr = p.ind;
         int & p_dominated_by = p.dominated;
         std::vector<DominationInfo *> & p_dominates = p.dominates;
 
-        for (int k = j+1; k < population_set.size(); ++k)
+        for (std::vector<DominationInfo>::size_type k = j+1; k < population_set.size(); ++k)
         {
 
             DominationInfo & q = population_set[k];
@@ -112,10 +112,10 @@ debNonDominatedSort(const Population & population_ref)
     }
 
     int front_num = 0;
-    BOOST_FOREACH(DominationInfo & p, population_set)
+    for(DominationInfo & p: population_set)
                 {
                     IndividualSPtr p_ptr = p.ind;
-                    int & p_dominated_by = p.dominated;
+                    const int & p_dominated_by = p.dominated;
                     if (p_dominated_by == 0)
                     {
                         front_sets[front_num].push_back(&p);
@@ -132,9 +132,9 @@ debNonDominatedSort(const Population & population_ref)
     {
         front_sets.push_back(dummy_front1);
         fronts->push_back(dummy_front2);
-        BOOST_FOREACH(DominationInfo * p, front_sets[front_num])
+        for (DominationInfo * p: front_sets[front_num])
                     {
-                        BOOST_FOREACH(DominationInfo * q, p->dominates)
+                        for (DominationInfo * q: p->dominates)
                                     {
 //                    std::cout << "from " << q->dominated;
                                         q->dominated = --(q->dominated);

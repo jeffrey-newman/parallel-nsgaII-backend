@@ -21,21 +21,55 @@
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/home/support/common_terminals.hpp>
 
+class Individual;
+typedef Individual * IndividualPtr;
+typedef boost::shared_ptr<Individual> IndividualSPtr;
+
+class Population;
+typedef boost::shared_ptr<Population> PopulationSPtr;
+typedef Population Front;
+typedef PopulationSPtr FrontSPtr;
+typedef std::vector<Front> Fronts;
+typedef boost::shared_ptr<Fronts > FrontsSPtr;
+inline FrontsSPtr debNonDominatedSort(const Population& population_ref);
+typedef std::vector<std::pair<IndividualSPtr, double > > IndividualsWithCrowdingDistanceVec;
+inline IndividualsWithCrowdingDistanceVec calculateDebsCrowdingDistance(const Front& front_set);
+
+class EvaluatePopulationBase;
+
 class Individual
 {
+	friend FrontsSPtr debNonDominatedSort(const Population& population_ref);
+	friend IndividualsWithCrowdingDistanceVec calculateDebsCrowdingDistance(const Front& front_set);
+	friend class EvaluatePopulation;
+	friend class ParallelEvaluatePopServerNonBlocking;
+	template <typename RNG> friend class ParallelEvaluatePopServerNonBlockingContinuousEvolution;
+	friend class ParallelEvaluatorServerBase;
+	template <typename RNG> friend class CreepMutation;
+	template <typename RNG> friend class UniformIntMutation;
+	template <typename RNG> friend class DebsPolynomialMutation;
+	template <typename RNG> friend class OnePointCrossover;
+	template <typename RNG> friend class DebsSBXCrossover;
+
 public:
-//    bool mutated;
-//    bool crossovered;
-//    bool parent;
-//    bool child;
+
+	typedef ProblemDefinitions::RealDVsT RealDVsT;
+	typedef ProblemDefinitions::UnorderedDVsT UnorderedDVsT;
+	typedef ProblemDefinitions::OrderedDVsT OrderedDVsT;
+	typedef ProblemDefinitions::ObjectivesT ObjectivesT;
+	typedef ProblemDefinitions::ConstraintsT ConstraintsT;
+	typedef ProblemDefinitions::MinOrMaxType MinOrMaxType;
+	typedef ProblemDefinitions::ObjectivesDirectionT ObjectivesDirectionT;
+	typedef ProblemDefinitions::ObjectivesAndConstraintsT ObjectivesAndConstraintsT;
 
 private:
     
     ProblemDefinitionsSPtr definitions;
-    std::vector<double> real_decision_variables;
-    std::vector<int> int_decision_variables;
-    std::vector<double> objectives;
-    std::vector<double> constraints;
+	RealDVsT real_decision_variables;
+	UnorderedDVsT unordered_dvs;
+	OrderedDVsT ordered_dvs;
+	ObjectivesT objectives;
+	ConstraintsT constraints;
     int rank;
     double crowding_score;
     
@@ -66,224 +100,194 @@ public:
 //    }
     
     Individual(const Individual & cpy)
-    : definitions(cpy.definitions), real_decision_variables(cpy.real_decision_variables), int_decision_variables(cpy.int_decision_variables), objectives(cpy.objectives), constraints(cpy.constraints), rank(cpy.rank), crowding_score(cpy.crowding_score)//, mutated(false), crossovered(false), child(false), parent(false)
+    : definitions(cpy.definitions), 
+		real_decision_variables(cpy.real_decision_variables), 
+		unordered_dvs(cpy.unordered_dvs), 
+		ordered_dvs(cpy.ordered_dvs),
+		objectives(cpy.objectives), 
+		constraints(cpy.constraints), 
+		rank(cpy.rank), 
+		crowding_score(cpy.crowding_score)//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
     }
     
     Individual(ProblemDefinitionsSPtr defs)
-    : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
+    : definitions(defs), 
+		real_decision_variables(defs->real_lowerbounds.size()), 
+		unordered_dvs(defs->unordered_lowerbounds.size()), 
+		ordered_dvs(defs->ordered_lowerbounds.size()),
+		objectives(defs->minimise_or_maximise.size()), 
+		constraints(defs->number_constraints), 
+		rank(std::numeric_limits<int>::max()), 
+		crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
         
     }
 
     Individual(std::string & s, ProblemDefinitionsSPtr defs)
-            : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
+            : definitions(defs), 
+		real_decision_variables(defs->real_lowerbounds.size()), 
+		unordered_dvs(defs->unordered_lowerbounds.size()), 
+		objectives(defs->minimise_or_maximise.size()), 
+		ordered_dvs(defs->ordered_lowerbounds.size()),
+		constraints(defs->number_constraints), 
+		rank(std::numeric_limits<int>::max()), 
+		crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
-        //Format of population seeding file:
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-
-        namespace qi = boost::spirit::qi;
-        namespace ph = boost::phoenix;
-
-        qi::rule<std::string::iterator, std::vector<int>(), qi::space_type> int_vec_parser = *qi::int_;
-        qi::rule<std::string::iterator, std::vector<double>(), qi::space_type> real_vec_parser = *qi::double_;
-        qi::rule<std::string::iterator,  qi::space_type> ind_parser = qi::lit('[')
-                                                        >> int_vec_parser[ph::ref(this->int_decision_variables) = qi::_1]
-                                                        >> qi::lit(';')
-                                                        >> real_vec_parser[ph::ref(this->real_decision_variables) = qi::_1]
-                                                        >> qi::lit(']')
-                                                        >> -(
-                                                                qi::lit("->")
-                                                                >> qi::lit('(')
-                                                                >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
-                                                                >> qi::lit(';')
-                                                                >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
-                                                                >> qi::lit(')')
-                                                           )
-                                                        >> -(qi::lit("Rank:") >> qi::int_[ph::ref(this->rank) = qi::_1])
-                                                        >> -(qi::lit("CrowdingDist:") >> qi::double_[ph::ref(this->crowding_score) = qi::_1]);
-        ind_parser.name("individual_parser");
-//        qi::debug(ind_parser);
-        std::string::iterator it = s.begin();
-        std::string::iterator end = s.end();
-        bool r = boost::spirit::qi::phrase_parse(it, end, ind_parser, qi::space);
-        if (!(r && it == end))
-        {
-            std::string rest(it, end);
-            std::cout << "-------------------------\n";
-            std::cout << "Parsing failed\n";
-            std::cout << "stopped at: \"" << rest << "\"\n";
-            std::cout << "-------------------------\n";
-        }
-
-        if (this->real_decision_variables.size() < this->numberOfRealDecisionVariables())
-        {
-            std::cerr << "Check specification - read in " << this->real_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfRealDecisionVariables() << " real decision variables." << std::endl;
-            this->real_decision_variables.resize(this->numberOfRealDecisionVariables());
-        }
-        if (this->int_decision_variables.size() < this->numberOfIntDecisionVariables())
-        {
-            std::cerr << "Check specification - read in " << this->int_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfIntDecisionVariables() << " integer decision variables." << std::endl;
-            this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
-        }
-        for (int j = 0; j < real_decision_variables.size() ; ++j)
-        {
-            if (real_decision_variables[j] < defs->real_lowerbounds[j])
-            {
-                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->real_lowerbounds[j] << std::endl;
-                real_decision_variables[j] = defs->real_lowerbounds[j];
-            }
-            if (real_decision_variables[j] > defs->real_upperbounds[j])
-            {
-                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->real_upperbounds[j] << std::endl;
-                real_decision_variables[j] = defs->real_upperbounds[j];
-            }
-        }
-        for (int j = 0; j < int_decision_variables.size() ; ++j)
-        {
-            if (int_decision_variables[j] < defs->int_lowerbounds[j])
-            {
-                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->int_lowerbounds[j] << std::endl;
-                int_decision_variables[j] = defs->int_lowerbounds[j];
-            }
-            if (int_decision_variables[j] > defs->int_upperbounds[j])
-            {
-                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->int_upperbounds[j] << std::endl;
-                int_decision_variables[j] = defs->int_upperbounds[j];
-            }
-        }
-
-
-        if (this->objectives.size() < this->numberOfObjectives()) this->objectives.resize(this->numberOfObjectives());
-        if (this->constraints.size() < this->numberOfConstraints()) this->constraints.resize(this->numberOfConstraints());
+		parse(s, defs.get());
     }
 
     Individual(std::string & s, ProblemDefinitions * defs)
-        : definitions(defs), real_decision_variables(defs->real_lowerbounds.size()), int_decision_variables(defs->int_lowerbounds.size()), objectives(defs->minimise_or_maximise.size()), constraints(defs->number_constraints), rank(std::numeric_limits<int>::max()), crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
+        : definitions(defs), 
+		real_decision_variables(defs->real_lowerbounds.size()), 
+		unordered_dvs(defs->unordered_lowerbounds.size()), 
+		ordered_dvs(defs->ordered_lowerbounds.size()), 
+		objectives(defs->minimise_or_maximise.size()), 
+		constraints(defs->number_constraints), 
+		rank(std::numeric_limits<int>::max()), 
+		crowding_score(std::numeric_limits<double>::min())//, mutated(false), crossovered(false), child(false), parent(false)
     {
-        //Format of population seeding file:
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-        //[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
-
-        namespace qi = boost::spirit::qi;
-        namespace ph = boost::phoenix;
-
-        qi::rule<std::string::iterator, std::vector<int>(), qi::space_type> int_vec_parser = *qi::int_;
-        qi::rule<std::string::iterator, std::vector<double>(), qi::space_type> real_vec_parser = *qi::double_;
-        qi::rule<std::string::iterator,  qi::space_type> ind_parser =
-            qi::lit('[') >>
-            int_vec_parser[ph::ref(this->int_decision_variables) = qi::_1] >>
-            qi::lit(';') >>
-            real_vec_parser[ph::ref(this->real_decision_variables) = qi::_1] >>
-            qi::lit(']')
-            >> -(
-                qi::lit("->")
-                    >> qi::lit('(')
-                    >> real_vec_parser[ph::ref(this->objectives) = qi::_1]
-                    >> qi::lit(';')
-                    >> real_vec_parser[ph::ref(this->constraints) = qi::_1]
-                    >> qi::lit(')')
-            )
-            >> -(qi::lit("Rank:") >> qi::int_[ph::ref(this->rank) = qi::_1])
-            >> -(qi::lit("CrowdingDist:") >> qi::double_[ph::ref(this->crowding_score) = qi::_1])
-            ;
-        ind_parser.name("individual_parser");
-        int_vec_parser.name("int_vec_parser");
-        real_vec_parser.name("real_vec_parser");
-//        qi::debug(int_vec_parser);
-//        qi::debug(real_vec_parser);
-//        qi::debug(ind_parser);
-        std::string::iterator it = s.begin();
-        std::string::iterator end = s.end();
-        bool r = boost::spirit::qi::phrase_parse(it, end, ind_parser, qi::space);
-        if (!(r && it == end))
-        {
-            std::string rest(it, end);
-            std::cout << "-------------------------\n";
-            std::cout << "Parsing failed\n";
-            std::cout << "stopped at: \"" << rest << "\"\n";
-            std::cout << "-------------------------\n";
-        }
-
-        if (this->real_decision_variables.size() < this->numberOfRealDecisionVariables())
-        {
-            std::cerr << "Check specification - read in " << this->real_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfRealDecisionVariables() << " real decision variables." << std::endl;
-            this->real_decision_variables.resize(this->numberOfRealDecisionVariables());
-        }
-        if (this->int_decision_variables.size() < this->numberOfIntDecisionVariables())
-        {
-            std::cerr << "Check specification - read in " << this->int_decision_variables.size() << "; However, problem specification indicated there would be " << this->numberOfIntDecisionVariables() << " integer decision variables." << std::endl;
-            this->int_decision_variables.resize(this->numberOfIntDecisionVariables());
-        }
-        for (int j = 0; j < real_decision_variables.size() ; ++j)
-        {
-            if (real_decision_variables[j] < defs->real_lowerbounds[j])
-            {
-                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->real_lowerbounds[j] << std::endl;
-                real_decision_variables[j] = defs->real_lowerbounds[j];
-            }
-            if (real_decision_variables[j] > defs->real_upperbounds[j])
-            {
-                std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->real_upperbounds[j] << std::endl;
-                real_decision_variables[j] = defs->real_upperbounds[j];
-            }
-        }
-        for (int j = 0; j < int_decision_variables.size() ; ++j)
-        {
-            if (int_decision_variables[j] < defs->int_lowerbounds[j])
-            {
-                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->int_lowerbounds[j] << std::endl;
-                int_decision_variables[j] = defs->int_lowerbounds[j];
-            }
-            if (int_decision_variables[j] > defs->int_upperbounds[j])
-            {
-                std::cerr << "input int decision variable " << int_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->int_upperbounds[j] << std::endl;
-                int_decision_variables[j] = defs->int_upperbounds[j];
-            }
-        }
-
-
-        if (this->objectives.size() < this->numberOfObjectives()) this->objectives.resize(this->numberOfObjectives());
-        if (this->constraints.size() < this->numberOfConstraints()) this->constraints.resize(this->numberOfConstraints());
+		parse(s, defs);
     }
+
+	void
+		parse(std::string& s, ProblemDefinitions* defs)
+	{
+		//Format of population seeding file:
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+		//[int_dv1 int_dv2 ... ; real_dv1 real_dv2 ..... ]    -> (obj1 obj2 ...; cnstr1 cnstr2....)
+
+		namespace qi = boost::spirit::qi;
+		namespace ph = boost::phoenix;
+
+		qi::rule<std::string::iterator, std::vector<int>(), qi::space_type> int_vec_parser = *qi::int_;
+		qi::rule<std::string::iterator, std::vector<double>(), qi::space_type> real_vec_parser = *qi::double_;
+		qi::rule<std::string::iterator, qi::space_type> ind_parser =
+			qi::lit('[') >>
+			int_vec_parser[ph::ref(unordered_dvs) = qi::_1] >>
+			qi::lit(';') >>
+			int_vec_parser[ph::ref(ordered_dvs) = qi::_1] >>
+			qi::lit(';') >>
+			real_vec_parser[ph::ref(real_decision_variables) = qi::_1] >>
+			qi::lit(']')
+			>> -(
+				qi::lit("->")
+				>> qi::lit('(')
+				>> real_vec_parser[ph::ref(objectives) = qi::_1]
+				>> qi::lit(';')
+				>> real_vec_parser[ph::ref(constraints) = qi::_1]
+				>> qi::lit(')')
+				)
+			>> -(qi::lit("Rank:") >> qi::int_[ph::ref(rank) = qi::_1])
+			>> -(qi::lit("CrowdingDist:") >> qi::double_[ph::ref(crowding_score) = qi::_1])
+			;
+		ind_parser.name("individual_parser");
+		int_vec_parser.name("int_vec_parser");
+		real_vec_parser.name("real_vec_parser");
+		//        qi::debug(int_vec_parser);
+		//        qi::debug(real_vec_parser);
+		//        qi::debug(ind_parser);
+		std::string::iterator it = s.begin();
+		std::string::iterator end = s.end();
+		bool r = boost::spirit::qi::phrase_parse(it, end, ind_parser, qi::space);
+		if (!(r && it == end))
+		{
+			std::string rest(it, end);
+			std::cout << "-------------------------\n";
+			std::cout << "Parsing failed\n";
+			std::cout << "stopped at: \"" << rest << "\"\n";
+			std::cout << "-------------------------\n";
+		}
+
+		if (real_decision_variables.size() < numOfRealDVs())
+		{
+			std::cerr << "Check specification - read in " << real_decision_variables.size() << "; However, problem specification indicated there would be " << numOfRealDVs() << " real decision variables." << std::endl;
+			real_decision_variables.resize(numOfRealDVs());
+		}
+		if (unordered_dvs.size() < numOfUnorderedDVs())
+		{
+			std::cerr << "Check specification - read in " << unordered_dvs.size() << "; However, problem specification indicated there would be " << numOfUnorderedDVs() << " integer decision variables." << std::endl;
+			unordered_dvs.resize(numOfUnorderedDVs());
+		}
+		if (ordered_dvs.size() < numOfOrderedDVs())
+		{
+			std::cerr << "Check specification - read in " << ordered_dvs.size() << "; However, problem specification indicated there would be " << numOfOrderedDVs() << " integer decision variables." << std::endl;
+			ordered_dvs.resize(numOfOrderedDVs());
+		}
+		for (RealDVsT::size_type j = 0; j < real_decision_variables.size(); ++j)
+		{
+			if (real_decision_variables[j] < defs->real_lowerbounds[j])
+			{
+				std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->real_lowerbounds[j] << std::endl;
+				real_decision_variables[j] = defs->real_lowerbounds[j];
+			}
+			if (real_decision_variables[j] > defs->real_upperbounds[j])
+			{
+				std::cerr << "input real decision variable " << real_decision_variables[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->real_upperbounds[j] << std::endl;
+				real_decision_variables[j] = defs->real_upperbounds[j];
+			}
+		}
+		for (UnorderedDVsT::size_type j = 0; j < unordered_dvs.size(); ++j)
+		{
+			if (unordered_dvs[j] < defs->unordered_lowerbounds[j])
+			{
+				std::cerr << "input unordered decision variable " << unordered_dvs[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->unordered_lowerbounds[j] << std::endl;
+				unordered_dvs[j] = defs->unordered_lowerbounds[j];
+			}
+			if (unordered_dvs[j] > defs->unordered_upperbounds[j])
+			{
+				std::cerr << "input unordered decision variable " << unordered_dvs[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->unordered_upperbounds[j] << std::endl;
+				unordered_dvs[j] = defs->unordered_upperbounds[j];
+			}
+		}
+		for (OrderedDVsT::size_type j = 0; j < ordered_dvs.size(); ++j)
+		{
+			if (ordered_dvs[j] < defs->ordered_lowerbounds[j])
+			{
+				std::cerr << "input ordered decision variable " << ordered_dvs[j] << " at place " << j << " out of bounds; setting to lower bound which is " << defs->ordered_lowerbounds[j] << std::endl;
+				ordered_dvs[j] = defs->ordered_lowerbounds[j];
+			}
+			if (ordered_dvs[j] > defs->ordered_upperbounds[j])
+			{
+				std::cerr << "input ordered decision variable " << ordered_dvs[j] << " at place " << j << " out of bounds; setting to upper bound which is " << defs->ordered_upperbounds[j] << std::endl;
+				ordered_dvs[j] = defs->ordered_upperbounds[j];
+			}
+		}
+
+
+		if (objectives.size() < numOfObjectives()) objectives.resize(numOfObjectives());
+		if (constraints.size() < numOfConstraints()) constraints.resize(numOfConstraints());
+	}
 
     Individual()
     {
 
     }
 
-    void
-    setProblemDefinitions(ProblemDefinitionsSPtr defs)
-    {
-        definitions.swap(defs);
-    }
+	// Should not be able to change problem definitions. THese should be set at construction and not changed, else behaviour could be weird?
+    //void
+    //setProblemDefinitions(ProblemDefinitionsSPtr defs)
+    //{
+    //    definitions.swap(defs);
+    //}
     
     Individual &
     operator= ( const Individual & orig)
     {
         this->definitions = orig.definitions;
         this->real_decision_variables = orig.real_decision_variables;
-        this->int_decision_variables = orig.int_decision_variables;
+        this->unordered_dvs = orig.unordered_dvs;
+		this->ordered_dvs = orig.ordered_dvs;
         this->objectives = orig.objectives;
         this->constraints = orig.constraints;
         this->rank = orig.rank;
@@ -291,109 +295,69 @@ public:
         return (*this);
     }
     
-    const std::vector<double> &
+    const RealDVsT &
     getRealDVVector() const
     {
         return (real_decision_variables);
     }
     
-    const std::vector<int> &
-    getIntDVVector() const
+    const UnorderedDVsT &
+    getUnorderedDVVector() const
     {
-        return (int_decision_variables);
+        return (unordered_dvs);
     }
+
+	const OrderedDVsT &
+	getOrderedDVVector() const
+	{
+		return (unordered_dvs);
+	}
     
-    const std::vector<double> &
+    const ObjectivesT &
     getObjectives() const
     {
         return objectives;
     }
-
-    void
-    setObjectives(std::vector<double> objs)
-    {
-        objectives = objs;
-    }
-
-    std::tuple<std::vector<double> &, std::vector<double> &>
-    getMutableObjectivesAndConstraints()
-    {
-        return std::tie(objectives, constraints);
-    };
     
-    const std::vector<double> &
+    const ConstraintsT &
     getConstraints() const
     {
         return constraints;
     }
-
-    void
-    setConstraints(std::vector<double> cons)
-    {
-        constraints = cons;
-    }
     
     const MinOrMaxType &
-    isMinimiseOrMaximise(const int index) const
+    isMinimiseOrMaximise(const ProblemDefinitions::ObjectivesDirectionT::size_type index) const
     {
         return (definitions->minimise_or_maximise[index]);
         
     }
     
     const double &
-    getRealDV(const int index) const
+    getRealDV(const RealDVsT::size_type index) const
     {
         return (real_decision_variables[index]);
     }
     
-    void
-    setRealDV(const int index, const double & val)
-    {
-        real_decision_variables[index] = val;
-    }
-    
-    void
-    setRealDVs(std::vector<double> real_dvs)
-    {
-        real_decision_variables = real_dvs;
-    }
-    
     const int &
-    getIntDV(const int index) const
+    getUnorderedDV(const UnorderedDVsT::size_type index) const
     {
-        return (int_decision_variables[index]);
+        return (unordered_dvs[index]);
     }
-    
-    void
-    setIntDV(const int index, const int & val)
-    {
-        int_decision_variables[index] = val;
-    }
-    
-    void
-    setIntDVs(std::vector<int> int_dvs)
-    {
-        int_decision_variables = int_dvs;
-    }
-    
-    const double & getObjective(const int index) const
+
+	const int&
+	getOrderedDV(const OrderedDVsT::size_type index) const
+	{
+		return (ordered_dvs[index]);
+	}
+
+    const double & getObjective(ObjectivesT::size_type index) const
     {
         return (objectives[index]);
     }
     
-    void setObjective(const int index, const double & value)
-    {
-        objectives[index] = value;
-    }
-    
-    const double & getConstraint(const int index) const
+    const double & getConstraint(ConstraintsT::size_type index) const
     {
         return (constraints[index]);
-    }
-    
-    void setConstraint(const int index, const double & value)
-    {
-        constraints[index] = value;
     }
     
     const int getRank(void) const
@@ -401,57 +365,62 @@ public:
         return (rank);
     }
     
-    void setRank(const int _rank)
-    {
-        rank = _rank;
-    }
-    
     const double getCrowdingScore(void) const
     {
         return (crowding_score);
     }
     
-    void setCrowdingScore(double score)
-    {
-        crowding_score = score;
-    }
-    
-    const double & getRealUpperBound(const int index) const
+    const double & getRealUpperBound(RealDVsT::size_type index) const
     {
         return (definitions->real_upperbounds[index]);
     }
     
-    const double & getRealLowerBound(const int index) const
+    const double & getRealLowerBound(const RealDVsT::size_type index) const
     {
         return (definitions->real_lowerbounds[index]);
     }
     
-    const int getIntUpperBound(const int index) const
+    const int getUnorderedUpperBound(const UnorderedDVsT::size_type index) const
     {
-        return (definitions->int_upperbounds[index]);
+        return (definitions->unordered_upperbounds[index]);
     }
     
-    const int getIntLowerBound(const int index) const
+    const int getUnorderedLowerBound(const UnorderedDVsT::size_type index) const
     {
-        return (definitions->int_lowerbounds[index]);
+        return (definitions->unordered_lowerbounds[index]);
     }
+
+	const int getOrderedUpperBound(const OrderedDVsT::size_type index) const
+	{
+		return (definitions->ordered_upperbounds[index]);
+	}
+
+	const int getOrderedLowerBound(const OrderedDVsT::size_type index) const
+	{
+		return (definitions->ordered_lowerbounds[index]);
+	}
     
-    const unsigned long numberOfRealDecisionVariables() const
+    const RealDVsT::size_type numOfRealDVs() const
     {
         return (definitions->real_lowerbounds.size());
     }
     
-    const unsigned long numberOfIntDecisionVariables() const
+    const OrderedDVsT::size_type numOfOrderedDVs() const
     {
-        return (definitions->int_lowerbounds.size());
+        return (definitions->ordered_lowerbounds.size());
     }
     
-    const unsigned long numberOfObjectives() const
+	const  UnorderedDVsT::size_type numOfUnorderedDVs() const
+	{
+		return (definitions->unordered_lowerbounds.size());
+	}
+
+    const ObjectivesDirectionT::size_type numOfObjectives() const
     {
         return (definitions->minimise_or_maximise.size());
     }
     
-    const unsigned long numberOfConstraints() const
+    const unsigned int numOfConstraints() const
     {
         return (definitions->number_constraints);
     }
@@ -461,7 +430,8 @@ public:
     void serialize(Archive & ar, const unsigned int version)
     {
             ar & BOOST_SERIALIZATION_NVP(real_decision_variables);
-            ar & BOOST_SERIALIZATION_NVP(int_decision_variables);
+            ar & BOOST_SERIALIZATION_NVP(unordered_dvs);
+			ar& BOOST_SERIALIZATION_NVP(ordered_dvs);
             ar & BOOST_SERIALIZATION_NVP(objectives);
             ar & BOOST_SERIALIZATION_NVP(constraints);
             ar & BOOST_SERIALIZATION_NVP(rank);
@@ -470,10 +440,91 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Individual& Individual);
-};
 
-//typedef Individual * IndividualPtr;
-typedef boost::shared_ptr<Individual> IndividualSPtr;
+
+	private:
+
+		//ObjectivesAndConstraintsT
+		//	getMutableObjectivesAndConstraints()
+		//{
+		//	return ObjectivesAndConstraintsT(objectives, constraints);
+		//};
+
+		void setObjectivesAndConstraints(ObjectivesAndConstraintsT objs_and_constraints)
+		{
+			setObjectives(objs_and_constraints.first);
+			setConstraints(objs_and_constraints.second);
+		}
+
+		void setObjective(const int index, const double& value)
+		{
+			objectives[index] = value;
+		}
+
+		void
+			setObjectives(ProblemDefinitions::ObjectivesT objs)
+		{
+			objectives = objs;
+		}
+
+		void setConstraint(const int index, const double& value)
+		{
+			constraints[index] = value;
+		}
+
+		void
+			setConstraints(ProblemDefinitions::ConstraintsT cons)
+		{
+			constraints = cons;
+		}
+
+		void
+			setOrderedDV(const int index, const int& val)
+		{
+			ordered_dvs[index] = val;
+		}
+
+		void
+			setOrderedDVs(ProblemDefinitions::OrderedDVsT _ordered_dvs)
+		{
+			ordered_dvs = _ordered_dvs;
+		}
+
+		void
+			setUnorderedDV(const int index, const int& val)
+		{
+			unordered_dvs[index] = val;
+		}
+
+		void
+			setUnorderedDVs(ProblemDefinitions::UnorderedDVsT _unordered_dvs)
+		{
+			unordered_dvs = _unordered_dvs;
+		}
+
+		void
+			setRealDV(const int index, const double& val)
+		{
+			real_decision_variables[index] = val;
+		}
+
+		void
+			setRealDVs(ProblemDefinitions::RealDVsT real_dvs)
+		{
+			real_decision_variables = real_dvs;
+		}
+
+		void setCrowdingScore(double score)
+		{
+			crowding_score = score;
+		}
+
+		void setRank(const int _rank)
+		{
+			rank = _rank;
+		}
+		
+};
 
 inline std::ostream&
 operator<<(std::ostream& os, const IndividualSPtr ind)
@@ -487,22 +538,27 @@ operator<<(std::ostream& os, const Individual & ind)
 {
     os << "[ ";
 
-    BOOST_FOREACH(const int & idv, ind.getIntDVVector())
+    for(const int & idv: ind.getUnorderedDVVector())
     {
         os << idv << " ";
     }
     os << "; ";
-    BOOST_FOREACH(const double & ddv, ind.getRealDVVector())
+	for(const int& idv: ind.getOrderedDVVector())
+	{
+		os << idv << " ";
+	}
+	os << "; ";
+	for (const double & ddv: ind.getRealDVVector())
     {
         os << ddv << " ";
     }
     os << "] -> ( ";
-    BOOST_FOREACH(const double & obj, ind.getObjectives())
+	for (const double & obj: ind.getObjectives())
     {
         os << obj << " ";
     }
     os << "; ";
-    BOOST_FOREACH(const double & cnstrnt, ind.getConstraints())
+	for (const double & cnstrnt: ind.getConstraints())
     {
         os << cnstrnt << " ";
     }

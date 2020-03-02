@@ -126,10 +126,16 @@ public:
     }
 
     MutationBase<RNG> &
-    getIntMutationOperator()
+    getUnorderedMutationOperator()
     {
-        return (mutation.getIntMutationOperator());
+        return (mutation.getUnorderedMutationOperator());
     }
+
+	MutationBase<RNG>&
+	getOrderedMutationOperator()
+	{
+		return (mutation.getOrderedMutationOperator());
+	}
 
     PopulationSPtr
     step()

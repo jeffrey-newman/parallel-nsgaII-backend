@@ -9,6 +9,7 @@
 #ifndef ParallelEvaluator_h
 #define ParallelEvaluator_h
 
+
 #include <ctime>
 #include <chrono>
 #include <thread>
@@ -19,7 +20,7 @@
 #include <boost/serialization/utility.hpp>
 #include "serialize-tuple-master/serialize_tuple.h"
 #include <boost/date_time.hpp>
-#include <boost/asio.hpp>
+
 #include <functional>
 #include <queue>
 #include <set>
@@ -27,58 +28,181 @@
 #include "Selection.hpp"
 #include "Crossover.hpp"
 #include "Mutation.hpp"
+#include <boost/asio.hpp>
 
+//namespace{
+//
+//inline std::ostream& operator << (std::ostream& os, const std::tuple<int, std::vector<double>, std::vector<int> >& v)
+//{
+//    os << "[";
+//    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << "; ";
+//    for (std::vector<int>::const_iterator ii = std::get<2>(v).begin(); ii != std::get<2>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << " ] : Gen " << std::get<0>(v);
+//    return os;
+//}
+//
+//inline std::ostream& operator << (std::ostream& os, const std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> >& v)
+//{
+//    os << "(";
+//    for (std::vector<double>::const_iterator ii = std::get<0>(v).begin(); ii != std::get<0>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << "; ";
+//    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << " ) <- ";
+//
+//    os << "[";
+//    for (std::vector<double>::const_iterator ii = std::get<3>(v).begin(); ii != std::get<3>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << "; ";
+//    for (std::vector<int>::const_iterator ii = std::get<4>(v).begin(); ii != std::get<4>(v).end(); ++ii)
+//    {
+//        os << " " << *ii;
+//    }
+//    os << " ] : Gen " << std::get<2>(v);
+//    return os;
+//}
+//
+//
+//
+//
+//}
 
-namespace{
-
-inline std::ostream& operator << (std::ostream& os, const std::tuple<int, std::vector<double>, std::vector<int> >& v)
+struct EvaluatedIndividualDataT
 {
-    os << "[";
-    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << "; ";
-    for (std::vector<int>::const_iterator ii = std::get<2>(v).begin(); ii != std::get<2>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << " ] : Gen " << std::get<0>(v);
-    return os;
-}
+	typedef ProblemDefinitions::RealDVsT RealDVsT;
+	typedef ProblemDefinitions::UnorderedDVsT UnorderedDVsT;
+	typedef ProblemDefinitions::OrderedDVsT OrderedDVsT;
+	typedef ProblemDefinitions::ObjectivesT ObjectivesT;
+	typedef ProblemDefinitions::ConstraintsT ConstraintsT;
 
-inline std::ostream& operator << (std::ostream& os, const std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> >& v)
+	RealDVsT real_dvs;
+	UnorderedDVsT unordered_dvs;
+	OrderedDVsT ordered_dvs;
+	ObjectivesT objectives;
+	ConstraintsT constraints;
+	int gen_number;
+
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version)
+	{
+		ar& real_dvs;
+		ar& unordered_dvs;
+		ar& ordered_dvs;
+		ar& objectives;
+		ar& constraints;
+		ar& gen_number;
+	}
+
+	std::ostream& operator << (std::ostream& os) const
+	{
+		os << "(";
+		std::for_each(real_dvs.begin(), real_dvs.end(), [&os](double i)->void {os << i << " "; }); os << "; ";
+		std::for_each(unordered_dvs.begin(), unordered_dvs.end(), [&os](int i)->void {os << i << " "; }); os << "; ";
+		std::for_each(ordered_dvs.begin(), ordered_dvs.end(), [&os](int i)->void {os << i << " "; }); 
+		os << ") -> [";
+		std::for_each(objectives.begin(), objectives.end(), [&os](double i)->void {os << i << " "; }); os << "; ";
+		std::for_each(constraints.begin(), constraints.end(), [&os](double i)->void {os << i << " "; });
+		os << "] : Gen " << gen_number;
+		return os;
+	}
+
+	void initialise(ProblemDefinitionsSPtr prob_defs)
+	{
+		real_dvs = ObjectivesT(prob_defs->minimise_or_maximise.size(), 0.0);
+		unordered_dvs = ConstraintsT(prob_defs->number_constraints, 0.0);
+		gen_number = 0;
+		real_dvs = RealDVsT(prob_defs->real_lowerbounds.size(), 0.0);
+		unordered_dvs = UnorderedDVsT(prob_defs->unordered_lowerbounds.size(), 0);
+		ordered_dvs = OrderedDVsT(prob_defs->ordered_lowerbounds.size(), 0);
+	}
+
+
+};
+
+
+struct EvaledJobDataT
 {
-    os << "(";
-    for (std::vector<double>::const_iterator ii = std::get<0>(v).begin(); ii != std::get<0>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << "; ";
-    for (std::vector<double>::const_iterator ii = std::get<1>(v).begin(); ii != std::get<1>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << " ) <- ";
-
-    os << "[";
-    for (std::vector<double>::const_iterator ii = std::get<3>(v).begin(); ii != std::get<3>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << "; ";
-    for (std::vector<int>::const_iterator ii = std::get<4>(v).begin(); ii != std::get<4>(v).end(); ++ii)
-    {
-        os << " " << *ii;
-    }
-    os << " ] : Gen " << std::get<2>(v);
-    return os;
-}
+	EvaluatedIndividualDataT individual_dat;
+	int job_number;
+	boost::mpi::request request;
+};
 
 
+struct UnevaledIndividualDataT
+{
+	typedef ProblemDefinitions::RealDVsT RealDVsT;
+	typedef ProblemDefinitions::UnorderedDVsT UnorderedDVsT;
+	typedef ProblemDefinitions::OrderedDVsT OrderedDVsT;
 
+	RealDVsT real_dvs;
+	UnorderedDVsT unordered_dvs;
+	OrderedDVsT ordered_dvs;
+	int gen_number;
 
-}
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version)
+	{
+		ar& real_dvs;
+		ar& unordered_dvs;
+		ar& ordered_dvs;
+		ar& gen_number;
+	}
+
+	std::ostream& operator << (std::ostream& os) const
+	{
+		os << "(";
+		std::for_each(real_dvs.begin(), real_dvs.end(), [&os](double i)->void {os << i << " "; }); os << "; ";
+		std::for_each(unordered_dvs.begin(), unordered_dvs.end(), [&os](int i)->void {os << i << " "; }); os << "; ";
+		std::for_each(ordered_dvs.begin(), ordered_dvs.end(), [&os](int i)->void {os << i << " "; });
+		os << ") : Gen " << gen_number;
+		return os;
+	}
+
+	void initialise(ProblemDefinitionsSPtr prob_defs)
+	{
+		gen_number = 0;
+		real_dvs = RealDVsT(prob_defs->real_lowerbounds.size(), 0.0);
+		unordered_dvs = UnorderedDVsT(prob_defs->unordered_lowerbounds.size(), 0);
+		ordered_dvs = OrderedDVsT(prob_defs->ordered_lowerbounds.size(), 0);
+	}
+};
+
+struct GenerationDataT
+{
+	int gen_number;
+	std::string save_dir;
+
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version)
+	{
+		ar& gen_number;
+		ar& save_dir;
+	}
+
+	std::ostream& operator << (std::ostream& os) const
+	{
+		os << "Save -> \"" << save_dir << "\" : Gen " << gen_number;
+		return os;
+	}
+};
+
 
 class ParallelEvaluatorBase
 {
@@ -88,28 +212,32 @@ protected:
     boost::mpi::environment & mpi_env;
     boost::mpi::communicator & world;
     ProblemDefinitionsSPtr problem_defs;
-    int number_processes;
-    int number_clients;
+    unsigned int number_processes;
+    unsigned int number_clients;
 //    std::pair<std::vector<double>, std::vector<int> > decision_vars;
 //    std::tuple<std::vector<double>, std::vector<int>, std::vector<int> > decision_vars2;
 //    std::pair<std::vector<double>, std::vector<double> > objs_and_constraints;
-    std::tuple<std::vector<double>, std::vector<double>, int, std::vector<double>, std::vector<int> > objs_constraints_gen_num_dvs;
-    std::tuple<int, std::vector<double>, std::vector<int> > gen_number_dvs;
-    std::pair<std::vector<double>, std::vector<double> > worst_objs_and_constraints;
-    std::pair<std::string, int> save_dir_gen_nmbr;
+	EvaluatedIndividualDataT  uneval_ind_dat;
+    //std::tuple<std::vector<double>, std::vector<double>, unsigned int, std::vector<double>, std::vector<int> > uneval_ind_dat;
+	UnevaledIndividualDataT eval_ind_dat;
+    //std::tuple<unsigned int, std::vector<double>, std::vector<int> > eval_ind_dat;
+	typedef ProblemDefinitions::ObjectivesAndConstraintsT ObjectivesAndConstraintsT;
+	ObjectivesAndConstraintsT worst_objs_and_constraints;
+	GenerationDataT save_dir_gen_nmbr;
+    //std::pair<std::string, unsigned int> save_dir_gen_nmbr;
 //    boost::mpi::content dv_c;
 //    boost::mpi::content oc_c;
 //    boost::mpi::content ocgndv_c;
 //    boost::mpi::content gndv_c;
-    int max_tag;
+    unsigned int max_tag;
     int do_log;
-    int gen_num = 0;
+    unsigned int gen_num = 0;
     boost::filesystem::path log_directory;
     bool delete_previous_logfile = true;
     boost::filesystem::path previous_log_file = "";
     boost::filesystem::path log_file = "";
 //    std::ofstream log_stream;
-    std::time_t timeout_time;
+    double timeout_time;
     const std::string NO_SAVE = "no_save";
     const std::string TERMINATE = "terminate";
     
@@ -120,21 +248,24 @@ public:
           problem_defs(_problem_defs),
           number_processes(world.size()),
           number_clients(number_processes - 1),
-          max_tag(mpi_env.max_tag()),
+          max_tag(unsigned int(mpi_env.max_tag())),
           do_log(this->OFF)
     {
 
         worst_objs_and_constraints.first.resize(problem_defs->minimise_or_maximise.size());
         for (int i = 0; i < worst_objs_and_constraints.first.size(); ++i)
         {
-            if (problem_defs->minimise_or_maximise.at(i) == MINIMISATION ) worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::max();
-            if (problem_defs->minimise_or_maximise.at(i) == MAXIMISATION ) worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::min();
+            if (problem_defs->minimise_or_maximise.at(i) == ProblemDefinitions::MINIMISATION ) worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::max();
+			else worst_objs_and_constraints.first.at(i) = std::numeric_limits<double>::min();
         }
         worst_objs_and_constraints.second.resize(problem_defs->number_constraints);
         BOOST_FOREACH(double & constraint, worst_objs_and_constraints.second)
         {
             constraint = std::numeric_limits<double>::max();
         }
+
+		eval_ind_dat.initialise(problem_defs);
+		uneval_ind_dat.initialise(problem_defs);
 
     }
 
@@ -199,17 +330,19 @@ public:
         : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs)
     {
 //        std::cout << "receiving broadcast skeleton" << std::endl;
-        //Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
-//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
-//        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_constraints_gen_num_dvs),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(gen_number_dvs),0);
-
+#ifdef USE_MPI_SKELETONS
+		//Send skeleton of decision variable to make sending dvs to clients/slaves more efficient
+		//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
+	`	//        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(uneval_ind_dat),0);
+        boost::mpi::broadcast(world, boost::mpi::skeleton(eval_ind_dat),0);
+#else
 //        std::cout << "Getting content for skeleton" << std::endl;
 //        dv_c = boost::mpi::get_content(decision_vars);
 //        oc_c = boost::mpi::get_content(objs_and_constraints);
-//        ocgndv_c = boost::mpi::get_content(objs_constraints_gen_num_dvs);
-//        gndv_c  = boost::mpi::get_content(gen_number_dvs);
+          //ocgndv_c = boost::mpi::get_content(uneval_ind_dat);
+          //gndv_c  = boost::mpi::get_content(eval_ind_dat);
+#endif //USE_MPI_SKELETONS
 //        std::cout << "Completed initialisation Client" << std::endl;
     }
 
@@ -217,16 +350,16 @@ public:
 
 };
 
-class ParallelEvaluatorSeverBase : public ParallelEvaluatorBase, public EvaluatePopulationBase
+class ParallelEvaluatorServerBase : public ParallelEvaluatorBase, public EvaluatePopulationBase
 {
 private:
-    typedef std::tuple<int, std::vector<double>, std::vector<int> > JobsSentInfo; //first is gen number, then DVs.
-    typedef std::list<std::tuple<boost::mpi::request, int,  JobsSentInfo> > JobsSentList; //First is mpi_request, 2nd is job number, 3rd is tuple of objs, constraints, gen_num and decision vars
+    //typedef std::tuple<int, std::vector<double>, std::vector<int> > JobsSentInfo; //first is gen number, then DVs.
+    typedef std::list<EvaledJobDataT> JobsSentList; //First is mpi_request, 2nd is job number, 3rd is tuple of objs, constraints, gen_num and decision vars
     JobsSentList jobs_sending;
     const int MAX_JOB_NUM = std::numeric_limits<int>::max()-2;
 
 public:
-    ParallelEvaluatorSeverBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
+    ParallelEvaluatorServerBase(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, double _timeout_time = 1800)
     : ParallelEvaluatorBase(_mpi_env, _world, _problem_defs)
     {
         this->timeout_time = _timeout_time;
@@ -253,29 +386,21 @@ public:
 //                std::forward_as_tuple(std::vector<double>(problem_defs->number_constraints, 0.0))
 //            );
 
-        std::get<0>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->minimise_or_maximise.size(), 0.0);
-        std::get<1>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->number_constraints, 0.0);
-        std::get<2>(objs_constraints_gen_num_dvs) = 0;
-        std::get<3>(objs_constraints_gen_num_dvs) = std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0);
-        std::get<4>(objs_constraints_gen_num_dvs) = std::vector<int>(problem_defs->int_lowerbounds.size(), 0);
-
-        std::get<0>(gen_number_dvs) = 0;
-        std::get<1>(gen_number_dvs) = std::vector<double>(problem_defs->real_lowerbounds.size(), 0.0);
-        std::get<2>(gen_number_dvs) = std::vector<int>(problem_defs->int_lowerbounds.size(), 0);
-
 
 //        std::cout << "Broadcasting skeleton" << std::endl;
-//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
+#ifdef USE_MPI_SKELETONS
+		//        boost::mpi::broadcast(world, boost::mpi::skeleton(decision_vars),0);
 //        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_and_constraints),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(objs_constraints_gen_num_dvs),0);
-        boost::mpi::broadcast(world, boost::mpi::skeleton(gen_number_dvs),0);
+		boost::mpi::broadcast(world, boost::mpi::skeleton(uneval_ind_dat),0);   
+		boost::mpi::broadcast(world, boost::mpi::skeleton(eval_ind_dat),0);
+#else
 
 //        std::cout << "Getting content for skeleton" << std::endl;
-//        dv_c = boost::mpi::get_content(decision_vars);
-//        oc_c = boost::mpi::get_content(objs_and_constraints);
-//        ocgndv_c = boost::mpi::get_content(objs_constraints_gen_num_dvs);
-//        gndv_c  = boost::mpi::get_content(gen_number_dvs);
-
+		//dv_c = boost::mpi::get_content(decision_vars);
+		//        oc_c = boost::mpi::get_content(objs_and_constraints);
+		//ocgndv_c = boost::mpi::get_content(uneval_ind_dat);
+		//gndv_c  = boost::mpi::get_content(eval_ind_dat);
+#endif // USE_MPI_SKELETONS
 //        std::cout << "Completed initialisation Server" << std::endl;
     }
 
@@ -293,7 +418,7 @@ public:
 //        std::cout << "In destructor" << std::endl;
 
         std::vector<boost::mpi::request> term_msg_rqsts;
-        for (int i = 1; i <= number_clients; ++i)
+        for (unsigned int i = 1; i <= number_clients; ++i)
         {
             if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending terminate to " << i << std::endl;
             term_msg_rqsts.push_back(world.isend(i, max_tag, TERMINATE));
@@ -311,19 +436,25 @@ public:
 
 
     void
-    sendJob(int _gen_num, const std::vector<double> & real_dvs, const std::vector<int>& int_dvs, int & job_num, int client_id, std::ofstream & logging_file)
+    sendJob(unsigned int _gen_num, const std::vector<double> & real_dvs, const std::vector<int>& int_dvs, unsigned int & job_num, int client_id, std::ofstream & logging_file)
     {
         job_num += 1;
 
-        std::get<0>(gen_number_dvs) = _gen_num;
-        std::get<1>(gen_number_dvs) = real_dvs;
-        std::get<2>(gen_number_dvs) = int_dvs;
+        std::get<0>(eval_ind_dat) = _gen_num;
+        std::get<1>(eval_ind_dat) = real_dvs;
+        std::get<2>(eval_ind_dat) = int_dvs;
 
-        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual/job num " << job_num << " with " << real_dvs.size() << ", " << int_dvs.size() << " DVS: " << gen_number_dvs << std::endl;
+        if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual/job num " << job_num << " with " << real_dvs.size() << ", " << int_dvs.size() << " DVS: " << eval_ind_dat << std::endl;
         boost::mpi::request rq;
-        jobs_sending.push_front(std::make_tuple(rq, job_num, gen_number_dvs));
+        jobs_sending.push_front(std::make_tuple(rq, job_num, eval_ind_dat));
         std::tuple<boost::mpi::request, int,  JobsSentInfo> & job = jobs_sending.front();
-            std::get<0>(job) = world.isend(client_id, std::get<1>(job), boost::mpi::get_content(std::get<2>(job)));
+#ifdef USE_MPI_SKELETONS
+		std::get<0>(job) = world.isend(client_id, std::get<1>(job), boost::mpi::get_content(std::get<2>(job)));
+#else
+		std::get<0>(job) = world.isend(client_id, std::get<1>(job), std::get<2>(job));
+#endif // USE_MPI_SKELETONS
+
+            
 
         if (job_num > max_tag - 3) job_num = 0;
 
@@ -411,11 +542,15 @@ public:
     waitForJobToFinish(std::ofstream & logging_file, int job_id = boost::mpi::any_tag)
     {
         //start a receive request, non-blocking
-        boost::mpi::request r = world.irecv(boost::mpi::any_source, job_id, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+#ifdef USE_MPI_SKELETONS
+        boost::mpi::request r = world.irecv(boost::mpi::any_source, job_id, boost::mpi::get_content(uneval_ind_dat));
+#else
+		boost::mpi::request r = world.irecv(boost::mpi::any_source, job_id, uneval_ind_dat);
+#endif
         //get start time
         std::time_t start_time, end_time;
         std::time(&start_time);
-        int elapsed_time = 0;
+        double elapsed_time = 0;
         boost::optional<boost::mpi::status> osr;
         // test if we have made a receive.
         do
@@ -439,7 +574,7 @@ public:
     }
 
     void
-    evalAndSavePopImpl(PopulationSPtr population, const boost::filesystem::path & save_dir, int _gen_num)
+    evalAndSavePopImpl(PopulationSPtr population, const boost::filesystem::path & save_dir, unsigned int _gen_num)
     {
         std::ofstream logging_file;
         std::string base_log_file_name = "ParallelEvaluatePopServer_EvalSave";
@@ -456,7 +591,7 @@ public:
         save_dir_gen_nmbr.second = _gen_num;
 
         std::vector<boost::mpi::request> save_dir_msg_rqsts;
-        for (int i = 1; i <= number_clients; ++i)
+        for (unsigned int i = 1; i <= number_clients; ++i)
         {
             if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << i << " save directory: " << save_dir << " and generational number: " << _gen_num << std::endl;
             save_dir_msg_rqsts.push_back(world.isend(i, max_tag, save_dir_gen_nmbr));
@@ -479,15 +614,15 @@ public:
 
         deleteAllJobs(logging_file);
 
-        int individual = 0;
+        unsigned int individual = 0;
 //        std::vector<boost::mpi::request> reqs_out(number_clients);
-        int num_initial_jobs = number_clients;
-        if (num_initial_jobs > population->populationSize()) num_initial_jobs = population->populationSize();
+        unsigned int num_initial_jobs = number_clients;
+        if (num_initial_jobs > population->populationSize()) num_initial_jobs = unsigned int(population->populationSize());
         for (; individual < num_initial_jobs; )
         {
             // sendJob increments 'indivudal'
             int client_id = individual + 1;
-            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getIntDVVector(), individual, client_id, logging_file);
+            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getUnorderedDVVector(), individual, client_id, logging_file);
         }
 
         //Check messages have all been sent
@@ -500,23 +635,27 @@ public:
         while (individual < population->populationSize())
         {
             //start a receive request, non-blocking
-            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+#ifdef USE_MPI_SKELETONS
+            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(uneval_ind_dat));
+#else
+			boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, uneval_ind_dat);
+#endif // USE_MPI_SKELETONS
             boost::mpi::status s_results = r_results.wait();
             int client_id = s_results.source();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << uneval_ind_dat << std::endl;
 
             // Send out new job.
-            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getIntDVVector(), individual, client_id, logging_file);
+            sendJob(_gen_num, (*population)[individual]->getRealDVVector(), (*population)[individual]->getUnorderedDVVector(), individual, client_id, logging_file);
 
             //Process received job
             if (s_results.tag() < population->size())
             {
-                if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
-                    &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(uneval_ind_dat))
+                    &&  ((*population)[s_results.tag() - 1]->getUnorderedDVVector() == std::get<4>(uneval_ind_dat)) )
                 // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                 {
-                    (*population)[s_results.tag() - 1]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
-                    (*population)[s_results.tag() - 1]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                    (*population)[s_results.tag() - 1]->setObjectives(std::get<0>(uneval_ind_dat));
+                    (*population)[s_results.tag() - 1]->setConstraints(std::get<1>(uneval_ind_dat));
                     results_received += 1;
                 }
             }
@@ -534,15 +673,15 @@ public:
             if (os)
             {
                 boost::mpi::status s_results = os.get();
-                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s_results.source() << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
+                if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << s_results.source() << " individual/job number " << s_results.tag() << " with " << uneval_ind_dat << std::endl;
                 //Process received job
 
-                    if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(objs_constraints_gen_num_dvs))
-                        &&  ((*population)[s_results.tag() - 1]->getIntDVVector() == std::get<4>(objs_constraints_gen_num_dvs)) )
+                    if ( ((*population)[s_results.tag() - 1]->getRealDVVector() == std::get<3>(uneval_ind_dat))
+                        &&  ((*population)[s_results.tag() - 1]->getUnorderedDVVector() == std::get<4>(uneval_ind_dat)) )
                         // we -1 in pop index as vectors are indexed from 0, while the tag is the ind. number indexed from 1.
                     {
-                        (*population)[s_results.tag()-1]->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
-                        (*population)[s_results.tag()-1]->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+                        (*population)[s_results.tag()-1]->setObjectives(std::get<0>(uneval_ind_dat));
+                        (*population)[s_results.tag()-1]->setConstraints(std::get<1>(uneval_ind_dat));
                         results_received += 1;
                     }
 
@@ -576,12 +715,12 @@ public:
 
 
 
-class ParallelEvaluatePopServerNonBlocking : public ParallelEvaluatorSeverBase
+class ParallelEvaluatePopServerNonBlocking : public ParallelEvaluatorServerBase
 {
 
 public:
-    ParallelEvaluatePopServerNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
-    : ParallelEvaluatorSeverBase(_mpi_env, _world, _problem_defs)
+    ParallelEvaluatePopServerNonBlocking(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, double _timeout_time = 1800)
+    : ParallelEvaluatorServerBase(_mpi_env, _world, _problem_defs)
     {
 
     }
@@ -615,7 +754,7 @@ public:
 
 
 template <typename RNG_PE = std::mt19937>
-class ParallelEvaluatePopServerNonBlockingContinuousEvolution : public ParallelEvaluatorSeverBase
+class ParallelEvaluatePopServerNonBlockingContinuousEvolution : public ParallelEvaluatorServerBase
 {
 
 private:
@@ -628,7 +767,7 @@ private:
     TournamentSelectionContinuousEvolution<RNG_PE> & selection;
     CombinedRealIntCrossover<RNG_PE> & crossover;
     CombinedRealIntMutation<RNG_PE> & mutation;
-    int job_num = 0;
+    unsigned int job_num = 0;
 //    int gen_num = 0;
 //    int breed_and_eval_count = 0;
 //    int eval_and_save_count = 0;
@@ -640,8 +779,8 @@ public:
                                                             TournamentSelectionContinuousEvolution<RNG_PE> & _selection,
                                                             CombinedRealIntCrossover<RNG_PE> & _crossover,
                                                             CombinedRealIntMutation<RNG_PE> & _mutation,
-                                                            std::time_t _timeout_time = 1800)
-        : ParallelEvaluatorSeverBase(_mpi_env, _world, _problem_defs), selection(_selection), crossover(_crossover), mutation(_mutation)
+                                                            double _timeout_time = 1800)
+        : ParallelEvaluatorServerBase(_mpi_env, _world, _problem_defs), selection(_selection), crossover(_crossover), mutation(_mutation)
     {
 
 
@@ -717,11 +856,11 @@ public:
 
         for (int j = 0; j < CLIENT_QUEUE_SIZE; ++j)
         {
-            for (int k = 0; k < number_clients; ++k)
+            for (unsigned int k = 0; k < number_clients; ++k)
             {
                 if (jobs.size() == 0) makeJobsApplyEAOperators(2);
                 int client_id = k + 1;
-                sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getIntDVVector(), job_num, client_id, logging_file);
+                sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getUnorderedDVVector(), job_num, client_id, logging_file);
                 jobs.pop();
             }
         }
@@ -739,24 +878,27 @@ public:
         while (results_received < generational_reproduction_size)
         {
             //start a receive request, non-blocking
-
-            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(objs_constraints_gen_num_dvs));
+#ifdef USE_MPI_SKELETONS
+            boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, boost::mpi::get_content(uneval_ind_dat));
+#else
+			boost::mpi::request r_results = world.irecv(boost::mpi::any_source, boost::mpi::any_tag, uneval_ind_dat);
+#endif // USE_MPI_SKELETONS
             boost::mpi::status s_results = r_results.wait();
             int client_id = s_results.source();
-            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << objs_constraints_gen_num_dvs << std::endl;
+            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time()  << " received from " << client_id << " individual/job number " << s_results.tag() << " with " << uneval_ind_dat << std::endl;
 
             // Send out new job.
             if (jobs.size() == 0) makeJobsApplyEAOperators(2);
-            sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getIntDVVector(), job_num, client_id, logging_file);
+            sendJob(gen_num, jobs.front()->getRealDVVector(), jobs.front()->getUnorderedDVVector(), job_num, client_id, logging_file);
             jobs.pop();
 
 
             //process results
             IndividualSPtr ind(new Individual(this->problem_defs));
-            ind->setRealDVs(std::get<3>(objs_constraints_gen_num_dvs));
-            ind->setIntDVs(std::get<4>(objs_constraints_gen_num_dvs));
-            ind->setObjectives(std::get<0>(objs_constraints_gen_num_dvs));
-            ind->setConstraints(std::get<1>(objs_constraints_gen_num_dvs));
+            ind->setRealDVs(std::get<3>(uneval_ind_dat));
+            ind->setUnorderedDVs(std::get<4>(uneval_ind_dat));
+            ind->setObjectives(std::get<0>(uneval_ind_dat));
+            ind->setConstraints(std::get<1>(uneval_ind_dat));
             offspring->push_back(ind);
             if (add_offspring_2_mating_pool) selection.add2BreedingPop(ind);
             ++results_received;
@@ -970,14 +1112,18 @@ public:
                     {
                         if (s_is_job.get().tag() != max_tag)
                         {
-                            boost::mpi::request r_job = world.irecv(0, boost::mpi::any_tag, boost::mpi::get_content(gen_number_dvs));
+#ifdef USE_MPI_SKELETONS
+                            boost::mpi::request r_job = world.irecv(0, boost::mpi::any_tag, boost::mpi::get_content(eval_ind_dat));
+#else
+							boost::mpi::request r_job = world.irecv(0, boost::mpi::any_tag, eval_ind_dat);
+#endif // USE_MPI_SKELETONS
                             boost::mpi::status s_job = r_job.wait();
 
                             print_waiting = true;
                             if (this->do_log > this->OFF)
                                 logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
-                                                 << " received " << gen_number_dvs << " for individual/job number " << s_job.tag() << std::endl;
-                            jobs_2_do.insert(std::make_pair(s_job.tag(), gen_number_dvs));
+                                                 << " received " << eval_ind_dat << " for individual/job number " << s_job.tag() << std::endl;
+                            jobs_2_do.insert(std::make_pair(s_job.tag(), eval_ind_dat));
                         }
                         else // I.e. there is a message indicating next generation has commenced....
                         {
@@ -1024,19 +1170,23 @@ public:
                                 objs_and_constraints = eval(std::get<1>(job_2_do->second), std::get<2>(job_2_do->second), save_ind_dir);
                             }
 
-                            std::get<0>(objs_constraints_gen_num_dvs) = objs_and_constraints.first;
-                            std::get<1>(objs_constraints_gen_num_dvs) = objs_and_constraints.second;
-                            std::get<2>(objs_constraints_gen_num_dvs) = std::get<0>(job_2_do->second);
-                            std::get<3>(objs_constraints_gen_num_dvs) = std::get<1>(job_2_do->second);
-                            std::get<4>(objs_constraints_gen_num_dvs) = std::get<2>(job_2_do->second);
+                            std::get<0>(uneval_ind_dat) = objs_and_constraints.first;
+                            std::get<1>(uneval_ind_dat) = objs_and_constraints.second;
+                            std::get<2>(uneval_ind_dat) = std::get<0>(job_2_do->second);
+                            std::get<3>(uneval_ind_dat) = std::get<1>(job_2_do->second);
+                            std::get<4>(uneval_ind_dat) = std::get<2>(job_2_do->second);
                             boost::mpi::request rq;
-                            jobs_done.push_front(std::make_tuple(rq, job_2_do->first, objs_constraints_gen_num_dvs));
+                            jobs_done.push_front(std::make_tuple(rq, job_2_do->first, uneval_ind_dat));
                             std::tuple<boost::mpi::request, int,  JobsDoneInfo> & job_done = jobs_done.front();
 
                         if (this->do_log > this->OFF)
                                 logging_file << world.rank() << ": " << boost::posix_time::second_clock::local_time()
                                                  << " sending " << std::get<2>(job_done) << " for individual/job number " << std::get<1>(job_done) << std::endl;
+#ifdef USE_MPI_SKELETONS
                             std::get<0>(job_done) = world.isend(0, std::get<1>(job_done), boost::mpi::get_content(std::get<2>(job_done)));
+#else
+							std::get<0>(job_done) = world.isend(0, std::get<1>(job_done), std::get<2>(job_done));
+#endif //USE_MPI_SKELETONS
 
                             jobs_2_do.erase(job_2_do);
                     }
@@ -1101,12 +1251,12 @@ public:
 };
 
 
-//class ParallelEvaluatePopServer : public ParallelEvaluatorSeverBase
+//class ParallelEvaluatePopServer : public ParallelEvaluatorServerBase
 //{
 //
 //public:
 //    ParallelEvaluatePopServer(boost::mpi::environment & _mpi_env, boost::mpi::communicator & _world, ProblemDefinitionsSPtr _problem_defs, std::time_t _timeout_time = 1800)
-//    : ParallelEvaluatorSeverBase(_mpi_env, _world, _problem_defs)
+//    : ParallelEvaluatorServerBase(_mpi_env, _world, _problem_defs)
 //    {
 //
 //    }
@@ -1162,9 +1312,9 @@ public:
 //        for (; individual < num_initial_jobs; ++individual)
 //        {
 //            if (this->do_log > this->OFF) logging_file << world.rank() << ": " << "Evaluating individual " << individual << std::endl;
-//            std::get<0>(gen_number_dvs) = this->gen_num;
-//            std::get<1>(gen_number_dvs) = (*population)[individual]->getRealDVVector();
-//            std::get<2>(gen_number_dvs) = (*population)[individual]->getIntDVVector();
+//            std::get<0>(eval_ind_dat) = this->gen_num;
+//            std::get<1>(eval_ind_dat) = (*population)[individual]->getRealDVVector();
+//            std::get<2>(eval_ind_dat) = (*population)[individual]->getIntDVVector();
 //            int client_id = individual + 1;
 //            if (this->do_log > this->OFF) logging_file << world.rank() << ": " <<  boost::posix_time::second_clock::local_time() << " sending to " << client_id << " individual " << individual << " with "  << decision_vars.first.size() << ", " << decision_vars.second.size() << " DVs: " << decision_vars << std::endl;
 //            world.send(client_id, individual, gndv_c);
